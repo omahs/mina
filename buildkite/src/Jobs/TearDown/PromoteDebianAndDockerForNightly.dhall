@@ -17,6 +17,7 @@ in Pipeline.build
         dirtyWhen = [ S.everything ],
         path = "TearDown",
         stage = PipelineStage.Type.TearDown,
+        mode = PipelineMode.Type.Nightly,
         name = "PromoteDebianAndDockerForNigthly"
     }
   , steps = [
@@ -26,10 +27,12 @@ in Pipeline.build
             RunInToolchain.runInToolchainBullseye ["COVERALLS_TOKEN"]
               "buildkite/scripts/promote_debian_package.sh unstable nightly bullseye" && \
               "buildkite/scripts/promote_debian_package.sh unstable nightly buster" && \
-              "buildkite/scripts/promote_debian_package.sh unstable nightly focal",
+              "buildkite/scripts/promote_debian_package.sh unstable nightly focal" && \
+              "printf -v date '%(%Y-%m-%d)T\n' -1" && \
+              "export NEW_TAG=nightly-${date}" && \
+              "buildkite/scripts/retag-dockers.sh",
           label = "Promote Debian and dockers for nightly",
           key = "promote-debian-and-dockers-for-nightly",
-          mode = PipelineMode.Nightly
           target = Size.Small
         }
     ]

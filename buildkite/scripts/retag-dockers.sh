@@ -1,8 +1,12 @@
 #!/bin/bash
+set -eo pipefail
 
-printf -v date '%(%Y-%m-%d)T\n' -1 
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <new-tag>"
+  exit 1
+fi
 
-NEW_TAG="nightly-${date}"
+NEW_TAG=$1
 DOCKER_REGISTRY="gcr.io/o1labs-192920"
 
 SERVICES=('mina-archive', 'mina-daemon' 'mina-rosetta' 'mina-logproc' 'mina-batch-txn' 'mina-zkapp-test-transaction')
