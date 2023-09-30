@@ -1,3 +1,4 @@
+#!/bin/bash
 
 printf -v date '%(%Y-%m-%d)T\n' -1 
 
