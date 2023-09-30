@@ -23,11 +23,6 @@ if [ -z "$AWS_ACCESS_KEY_ID" ]; then
     exit 0
 fi
 
-set +x
-SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
-source "${SCRIPTPATH}/export-git-env-vars.sh"
-set -x
-
 echo "Publishing debs: ${DEBS} to Release: ${MINA_DEB_RELEASE} and Codename: ${MINA_DEB_CODENAME}"
 # Upload the deb files to s3.
 # If this fails, attempt to remove the lockfile and retry.

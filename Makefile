@@ -273,6 +273,7 @@ build_or_download_pv_keys: ocaml_checks
 	$(info Keys built)
 
 publish_debs:
+	@./buildkite/scripts/export-git-env-vars.sh
 	@./buildkite/scripts/publish-deb.sh
 
 genesiskeys:
