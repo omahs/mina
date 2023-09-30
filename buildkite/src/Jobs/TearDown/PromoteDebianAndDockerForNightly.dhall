@@ -10,7 +10,7 @@ let Pipeline = ../../Pipeline/Dsl.dhall
 let PipelineMode = ../../Pipeline/Mode.dhall
 let PipelineStage = ../../Pipeline/Stage.dhall
 
-in Pipeline.build 
+Pipeline.build 
   Pipeline.Config::{
     spec =
       JobSpec::{
