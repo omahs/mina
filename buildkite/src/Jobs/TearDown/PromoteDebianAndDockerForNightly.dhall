@@ -34,7 +34,7 @@ in Pipeline.build
                 buildkite/scripts/promote_debian_package.sh ${from_version} ${to_version} buster
                 buildkite/scripts/promote_debian_package.sh ${from_version} ${to_version} focal
                 printf -v date '%(%Y-%m-%d)T\n' -1
-                export NEW_TAG=nightly-${date}
+                export NEW_TAG=nightly-$date
                 buildkite/scripts/retag-dockers.sh
               '',
           label = "Promote Debian and dockers for nightly",
