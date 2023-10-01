@@ -10,7 +10,11 @@ let Pipeline = ../../Pipeline/Dsl.dhall
 let PipelineMode = ../../Pipeline/Mode.dhall
 let PipelineStage = ../../Pipeline/Stage.dhall
 
-Pipeline.build 
+let from_version = "unstable"
+let to_version = "nightly"
+
+
+in Pipeline.build 
   Pipeline.Config::{
     spec =
       JobSpec::{
@@ -25,12 +29,14 @@ Pipeline.build
         Command.Config::{
           commands =
             RunInToolchain.runInToolchainBullseye ["COVERALLS_TOKEN"]
-              "buildkite/scripts/promote_debian_package.sh unstable nightly bullseye" && \
-              "buildkite/scripts/promote_debian_package.sh unstable nightly buster" && \
-              "buildkite/scripts/promote_debian_package.sh unstable nightly focal" && \
-              "printf -v date '%(%Y-%m-%d)T\n' -1" && \
-              "export NEW_TAG=nightly-${date}" && \
-              "buildkite/scripts/retag-dockers.sh",
+              ''
+                buildkite/scripts/promote_debian_package.sh ${from_version} ${to_version} bullseye
+                buildkite/scripts/promote_debian_package.sh ${from_version} ${to_version} buster
+                buildkite/scripts/promote_debian_package.sh ${from_version} ${to_version} focal
+                printf -v date '%(%Y-%m-%d)T\n' -1
+                export NEW_TAG=nightly-${date}
+                buildkite/scripts/retag-dockers.sh
+              '',
           label = "Promote Debian and dockers for nightly",
           key = "promote-debian-and-dockers-for-nightly",
           target = Size.Small
