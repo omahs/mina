@@ -2,6 +2,9 @@
 
 set -eo pipefail
 
+
+source buildkite/scripts/export-git-env-vars.sh
+
 eval $(opam config env)
 export PATH=/home/opam/.cargo/bin:/usr/lib/go/bin:$PATH
 export GO=/usr/lib/go/bin/go
