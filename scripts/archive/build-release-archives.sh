@@ -64,7 +64,6 @@ cp ./default/src/app/archive_blocks/archive_blocks.exe "${BUILD_DIR}/usr/local/b
 cp ./default/src/app/extract_blocks/extract_blocks.exe "${BUILD_DIR}/usr/local/bin/mina-extract-blocks"
 cp ./default/src/app/missing_blocks_auditor/missing_blocks_auditor.exe "${BUILD_DIR}/usr/local/bin/mina-missing-blocks-auditor"
 cp ./default/src/app/replayer/replayer.exe "${BUILD_DIR}/usr/local/bin/mina-replayer"
-cp ./default/src/app/swap_bad_balances/swap_bad_balances.exe "${BUILD_DIR}/usr/local/bin/mina-swap-bad-balances"
 chmod --recursive +rx "${BUILD_DIR}/usr/local/bin"
 
 # echo contents of deb
