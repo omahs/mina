@@ -39,8 +39,7 @@ for SINK in ${SINKS}; do
 	    	  DELETE_COUNTER=$((DELETE_COUNTER+1))
           if [[ ${DRYRUN} == "false" ]]; then
             echo "${SINK} was created more than $PREDICATE. deleting log sink ..."
-            echo "CLEAN"
-            #gcloud logging sinks delete ${SINK} --project=${PROJECT_ID} -q
+            gcloud logging sinks delete ${SINK} --project=${PROJECT_ID} -q
           else 
             echo "[DRYRUN] ${SINK} was created more than $PREDICATE. It will be deleted on standard run"
           fi
