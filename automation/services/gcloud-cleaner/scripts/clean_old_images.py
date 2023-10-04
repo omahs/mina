@@ -8,7 +8,17 @@ import json
 import sys
 import os
 
-repositories_to_clean = ["batch_zkapp_txn_tool","block-archiver"]
+repositories_to_clean = ["batch_zkapp_txn_tool",
+        "block-archiver",
+        "mina-batch-txn",
+        "mina-daemon",
+        "mina-archive",
+        "mina-daemon-baked",
+        "mina-daemon-lightnet",
+        "mina-daemon-devnet",
+        "mina-daemon-instrumented",
+        "mina-snapp-test-transaction"
+]
 project = "gcr.io/o1labs-192920"
 github_repo = "minaProtocol/mina"
 
@@ -42,9 +52,9 @@ def delete_image(tag,dryrun,reason):
     if dryrun:
         print(f'[DRYRUN]: {gcr_repository}: deleting {image_prefix} because {reason}')
     else:
-        id = print(f'{gcr_repository}@sha256:{tag["digest"]}')
+        id = f'{gcr_repository}@{tag["digest"]}'
         print(f'{gcr_repository}: deleting {image_prefix} because ${reason}')
-        cmd = ["gcloud", "container", "images", "delete", gcr_repository,"--quiet", "--force-delete-tags"]
+        cmd = ["gcloud", "container", "images", "delete", id,"--quiet", "--force-delete-tags"]
         subprocess.run(cmd)
 
 
