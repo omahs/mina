@@ -21,6 +21,8 @@ repositories_to_clean = ["batch_zkapp_txn_tool",
 ]
 project = "gcr.io/o1labs-192920"
 github_repo = "minaProtocol/mina"
+batch_size = 10
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -47,16 +49,19 @@ repo = g.get_repo(github_repo)
 commits_to_skip = list(map(lambda x: x.commit.sha[0:7], repo.get_tags()))
 
 
-def delete_image(tag,dryrun,reason):
-    image_prefix = tag["digest"][:15]
+def delete_images(tags,dryrun,gcr_repository,reason):
     if dryrun:
-        print(f'[DRYRUN]: {gcr_repository}: deleting {image_prefix} because {reason}')
+        for tag in tags:
+            image_prefix = tag[:15]
+            print(f'[DRYRUN]: {gcr_repository}: deleting {image_prefix} because {reason}')
     else:
-        id = f'{gcr_repository}@{tag["digest"]}'
-        print(f'{gcr_repository}: deleting {image_prefix} because ${reason}')
-        cmd = ["gcloud", "container", "images", "delete", id,"--quiet", "--force-delete-tags"]
-        subprocess.run(cmd)
-
+        command = ["gcloud", "container", "images", "delete"]
+        for tag in tags:
+            image_prefix = tag[:15]
+            print(f'{gcr_repository}: deleting {image_prefix} because {reason}')
+            command.append(f'{gcr_repository}@{tag}')
+        command.extend(["--quiet", "--force-delete-tags"])        
+        subprocess.run(command)
 
 for gcr_repository in gcr_repositories:
     print(f"Cleaning {gcr_repository} repository... it may take a while")
@@ -66,19 +71,28 @@ for gcr_repository in gcr_repositories:
 
     threshold = datetime.now().date() - timedelta(days=args.age)
     deleted = 0
+    to_be_deleted = []
     for tag in tags:
         github_tags = tag["tags"]
         if not any(any(commit_to_skip in x for x in github_tags) for commit_to_skip in commits_to_skip):
             timestamp = tag["timestamp"]
             if timestamp is None:
-                delete_image(tag,args.dryrun,f"image doesn't have timestamp property (which means it's very old) and not tagged with version")
-                deleted += 1
+                to_be_deleted.append(tag["digest"])
             else:
                 date = datetime.strptime(timestamp["datetime"],"%Y-%m-%d %H:%M:%S%z")
                 if date.date() < threshold:
-                    delete_image(tag,args.dryrun,f"is older than {args.age} days and not tagged with version")
-                    deleted += 1
+                    to_be_deleted.append(tag["digest"])
 
+        if len(to_be_deleted) > batch_size:
+            delete_images(to_be_deleted,args.dryrun,gcr_repository,f"is older than {args.age} days and not tagged with version")
+            deleted += len(to_be_deleted)
+            to_be_deleted = []
+
+    if len(to_be_deleted) > 0:
+        delete_images(to_be_deleted,args.dryrun,gcr_repository,f"is older than {args.age} days and not tagged with version")
+        deleted += len(to_be_deleted)
+        to_be_deleted = []
+    
     total = len(tags)
     
     suffix = "will be deleted in standard run" if args.dryrun else "deleted"
