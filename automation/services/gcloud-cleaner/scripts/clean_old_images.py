@@ -60,7 +60,7 @@ def delete_images(tags,dryrun,gcr_repository,reason):
             image_prefix = tag[:15]
             print(f'{gcr_repository}: deleting {image_prefix} because {reason}')
             command.append(f'{gcr_repository}@{tag}')
-        command.extend(["--quiet", "--force-delete-tags"])        
+        command.extend(["--quiet", "--force-delete-tags"])
         subprocess.run(command)
 
 for gcr_repository in gcr_repositories:
