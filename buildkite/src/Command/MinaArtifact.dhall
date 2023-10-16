@@ -122,4 +122,5 @@ in
   bullseye  = pipeline DebianVersions.DebVersion.Bullseye
   , buster  = pipeline DebianVersions.DebVersion.Buster
   , focal   = pipeline DebianVersions.DebVersion.Focal
+  , bookworm = pipeline DebianVersions.DebVersion.Bookworm
 }
