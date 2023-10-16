@@ -26,8 +26,8 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # Dependencies
 RUN apt-get update --allow-unauthenticated --quiet --yes \
-  && apt-get upgrade --quiet --yes \
-  && apt-get install --quiet --yes --no-install-recommends \
+  && apt-get upgrade --allow-unauthenticated --quiet --yes \
+  && apt-get install --allow-unauthenticated --quiet --yes --no-install-recommends \
     apt-transport-https \
     ca-certificates \
     curl \
