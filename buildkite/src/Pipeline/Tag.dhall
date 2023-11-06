@@ -37,6 +37,7 @@ let capitalName = \(tag : Tag) ->
     , Lint = "Lint"
     , Release = "Release"
     , Test = "Test" 
+    , Maintenance = "Maintenance"
   } tag
 
 let lowerName = \(tag : Tag) ->
@@ -48,6 +49,7 @@ let lowerName = \(tag : Tag) ->
     , Lint = "lint"
     , Release = "release"
     , Test = "test" 
+    , Maintenance = "maintenance"
   } tag
 
 

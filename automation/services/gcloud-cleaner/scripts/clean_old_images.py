@@ -8,19 +8,23 @@ import json
 import sys
 import os
 
-repositories_to_clean = ["batch_zkapp_txn_tool",
-        "block-archiver",
-        "mina-batch-txn",
-        "mina-daemon",
-        "mina-archive",
-        "mina-daemon-baked",
-        "mina-daemon-lightnet",
-        "mina-daemon-devnet",
-        "mina-daemon-instrumented",
-        "mina-snapp-test-transaction"
+repositories_to_clean = [
+    "batch_zkapp_txn_tool",
+    "block-archiver",
+    "mina-batch-txn",
+    "mina-daemon",
+    "mina-archive",
+    "mina-daemon-baked",
+    "mina-daemon-lightnet",
+    "mina-daemon-devnet",
+    "mina-daemon-instrumented",
+    "mina-snapp-test-transaction"
 ]
 project = "gcr.io/o1labs-192920"
 github_repo = "minaProtocol/mina"
+
+# Removing images from GCR is a very slow process. One solution to speed it up is to use batches.
+# This parameter is effect of exploratory testing of perfect value.
 batch_size = 10
 
 
