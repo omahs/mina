@@ -30,7 +30,7 @@ Pipeline.build
     , steps = [
       Command.build
         Command.Config::{
-          commands = RunInToolchain.runInToolchain ([] : List Text) "python3 automation/services/gcloud-cleaner/scripts/clean_old_images.py ${image_age} ${dryrun}"
+          commands = RunInToolchain.runInToolchain ([] : List Text) "cd automation/services/gcloud-cleaner/scripts & pip install -r requirements.txt & python3 clean_old_images.py ${image_age} ${dryrun}"
           , label = "Maintenance: Clean old gcr images"
           , key = "maintenance-clean-old-images"
           , target = Size.Small
