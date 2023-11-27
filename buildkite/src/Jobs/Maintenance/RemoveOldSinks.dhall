@@ -31,8 +31,8 @@ Pipeline.build
       Command.build
         Command.Config::{
           commands = RunInToolchain.runInToolchain ([] : List Text) "automation/services/gcloud-cleaner/scripts/clean_old_sinks.sh  --age='${image_age}' --dryrun='${dryrun}'"
-          , label = "Maintenance: Clean old gcr images"
-          , key = "maintenance-clean-old-images"
+          , label = "Maintenance: Clean old sinks"
+          , key = "maintenance-clean-old-sinks"
           , target = Size.Small
           , docker = None Docker.Type
         }
