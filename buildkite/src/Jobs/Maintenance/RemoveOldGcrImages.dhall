@@ -22,6 +22,7 @@ Pipeline.build
         { dirtyWhen =
           [ S.strictlyStart (S.contains "automation/services")
           , S.strictlyStart (S.contains "buildkite/src/Jobs/Maintenance/RemoveOldGcrImages")
+          , S.exactly "buildkite/scripts/clean-images" "sh"
           ]
         , path = "Maintenance"
         , name = "RemoveOldGcrImages"
@@ -30,7 +31,7 @@ Pipeline.build
     , steps = [
       Command.build
         Command.Config::{
-          commands = RunInToolchain.runInToolchain ([] : List Text) "cd automation/services/gcloud-cleaner/scripts & pip install -r requirements.txt & python3 clean_old_images.py ${image_age} ${dryrun}"
+          commands = RunInToolchain.runInToolchain ([] : List Text) "buildkite/scripts/clean-images.sh ${image_age} ${dryrun}"
           , label = "Maintenance: Clean old gcr images"
           , key = "maintenance-clean-old-images"
           , target = Size.Small
