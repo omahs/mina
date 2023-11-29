@@ -45,7 +45,8 @@ echo " Includes mina daemon, archive-node, rosetta, generate keypair for berkele
 make deb
 
 echo "--- Upload debs to amazon s3 repo"
-make publish_debs
+#make publish_debs
+buildkite/scripts/upload-deb.sh
 
 echo "--- Git diff after build is complete:"
 git diff --exit-code
