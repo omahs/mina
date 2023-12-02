@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 set -eo pipefail
 
 DEBS='mina-*.deb'
