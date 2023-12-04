@@ -13,5 +13,5 @@ PREFIX=gs://buildkite_k8s/coda/shared
 FILE="$1"
 REMOTE_LOCATION="$2"
 
-$UPLOAD_BIN cp "${FILE}" "${PREFIX}/${REMOTE_LOCATION}
+$UPLOAD_BIN cp "${FILE}" "${PREFIX}/${REMOTE_LOCATION}"
 
