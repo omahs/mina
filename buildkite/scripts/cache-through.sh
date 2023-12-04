@@ -8,8 +8,6 @@ if [[ $# -ne 2 ]]; then
   exit 1
 fi
 
-UPLOAD_BIN=gsutil
-PREFIX=gs://buildkite_k8s/coda/shared
 FILE="$1"
 MISS_CMD="$2"
 
@@ -21,6 +19,6 @@ else
   set -e
   echo "*** Cache miss -- executing step ***"
   bash -c "$MISS_CMD"
-  $UPLOAD_BIN cp "${FILE}" "${PREFIX}/${FILE}"
+  source buildkite/scripts/cache-artifact.sh "${FILE}" "${PREFIX}/${FILE}"
 fi
 
