@@ -65,8 +65,8 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
             depends_on=DebianVersions.dependsOn debVersion profile,
             label = "Upload Mina artifacts for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",
             key = "upload-deb-pkg",
-            target = Size.Large,
-            depends_on = spec.deps,
+            target = Size.Small,
+            depends_on = spec.deps
           },
 
         -- daemon berkeley image
