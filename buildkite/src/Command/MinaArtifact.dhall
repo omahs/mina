@@ -56,7 +56,18 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
                 limit = Some 2
               } ] -- libp2p error
           },
-        Cmd.run "./buildkite/scripts/upload-deb.sh",
+
+        Command.build
+          Command.Config::{
+            commands  = [
+              Cmd.run "./buildkite/scripts/upload-deb.sh", 
+            ],
+            depends_on=DebianVersions.dependsOn debVersion profile,
+            label = "Upload Mina artifacts for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",",
+            key = "upload-deb-pkg",
+            target = Size.Large,
+            depends_on = spec.deps,
+          },
 
         -- daemon berkeley image
         let daemonBerkeleySpec = DockerImage.ReleaseSpec::{
