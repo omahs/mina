@@ -52,7 +52,7 @@ let dependsOnKey = \(debVersion : DebVersion) -> \(profile : Profiles.Type) -> \
   let profileSuffix = Profiles.toSuffixUppercase profile in
   let prefix = "MinaArtifact" in
   merge {
-    Bookworm = [{ name = "${prefix}${profileSuffix}", key }]
+    Bookworm = [{ name = "${prefix}${profileSuffix}", key = "${key}" }]
     , Bullseye = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
     , Buster = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
     , Jammy = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
