@@ -2,5 +2,5 @@
 set -eo pipefail
 
 for entry in **/mina-*.deb; do
-  ./buildkite/scripts/cache-artifact.sh $entry ${BUILDKITE_BUILD_ID}
+  ./buildkite/scripts/buildkite-artifact-helper.sh $entry 
 done

@@ -44,9 +44,5 @@ echo " Includes mina daemon, archive-node, rosetta, generate keypair for berkele
 [[ ${MINA_BUILD_MAINNET} ]] && echo " MINA_BUILD_MAINNET is true so this includes the mainnet and devnet packages for mina-daemon as well"
 make deb
 
-echo "--- Upload debs to amazon s3 repo"
-#make publish_debs
-buildkite/scripts/upload-deb.sh
-
 echo "--- Git diff after build is complete:"
 git diff --exit-code

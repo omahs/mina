@@ -57,6 +57,9 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
               } ] -- libp2p error
           },
 
+        Cmd.run echo "--- Upload debs to amazon s3 repo",
+        Cmd.run buildkite/scripts/upload-deb.sh,
+
         -- daemon berkeley image
         let daemonBerkeleySpec = DockerImage.ReleaseSpec::{
           deps=DebianVersions.dependsOn debVersion profile,
