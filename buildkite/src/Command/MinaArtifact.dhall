@@ -48,7 +48,7 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
               "MINA_DEB_CODENAME=${DebianVersions.lowerName debVersion}"
             ] "./buildkite/scripts/build-artifact.sh" 
             # [
-              Cmd.run "./buildkite/scripts/upload-deb.sh"
+              Cmd.run "./buildkite/scripts/upload-deb.sh ${DebianVersions.lowerName debVersion}"
             ],
             label = "Build Mina for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",
             key = "build-deb-pkg",
