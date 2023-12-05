@@ -56,8 +56,7 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
                 limit = Some 2
               } ] -- libp2p error
           },
-
-        Cmd.run buildkite/scripts/upload-deb.sh,
+        Cmd.run "./buildkite/scripts/upload-deb.sh",
 
         -- daemon berkeley image
         let daemonBerkeleySpec = DockerImage.ReleaseSpec::{
