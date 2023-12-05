@@ -53,10 +53,10 @@ let dependsOnKey = \(debVersion : DebVersion) -> \(profile : Profiles.Type) -> \
   let prefix = "MinaArtifact" in
   merge {
     Bookworm = [{ name = "${prefix}${profileSuffix}", key }]
-    , Bullseye = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
-    , Buster = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
-    , Jammy = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
-    , Focal = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
+    , Bullseye = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
+    , Buster = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
+    , Jammy = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
+    , Focal = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "${key}" }]
   } debVersion
 
 let dependsOn = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
