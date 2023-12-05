@@ -60,10 +60,10 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
         Command.build
           Command.Config::{
             commands  = [
-              Cmd.run "./buildkite/scripts/upload-deb.sh", 
+              Cmd.run "./buildkite/scripts/upload-deb.sh"
             ],
             depends_on=DebianVersions.dependsOn debVersion profile,
-            label = "Upload Mina artifacts for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",",
+            label = "Upload Mina artifacts for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",
             key = "upload-deb-pkg",
             target = Size.Large,
             depends_on = spec.deps,
