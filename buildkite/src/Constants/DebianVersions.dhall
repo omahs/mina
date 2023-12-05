@@ -47,16 +47,24 @@ let toolchainImage = \(debVersion : DebVersion) ->
     , Focal = ContainerImages.minaToolchainBullseye
   } debVersion
 
-let dependsOn = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
+
+let dependsOnKey = \(debVersion : DebVersion) -> \(profile : Profiles.Type) -> \(key: Text) ->
   let profileSuffix = Profiles.toSuffixUppercase profile in
   let prefix = "MinaArtifact" in
   merge {
-    Bookworm = [{ name = "${prefix}${profileSuffix}", key = "upload-deb-pkg" }]
-    , Bullseye = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "upload-deb-pkg" }]
-    , Buster = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "upload-deb-pkg" }]
-    , Jammy = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "upload-deb-pkg" }]
-    , Focal = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key = "upload-deb-pkg" }]
+    Bookworm = [{ name = "${prefix}${profileSuffix}", key }]
+    , Bullseye = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
+    , Buster = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
+    , Jammy = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
+    , Focal = [{ name = "${prefix}${capitalName debVersion}${profileSuffix}", key }]
   } debVersion
+
+let dependsOn = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
+  dependsOnKey debVersion profile "upload-deb-pkg"
+
+let dependsOnBuild = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
+  dependsOnKey debVersion profile "build-deb-pkg"
+
 
 -- Most debian builds are only used for public releases
 -- so they don't need to be triggered by dirtyWhen on every change
@@ -109,5 +117,7 @@ in
   , toolchainRunner = toolchainRunner
   , toolchainImage = toolchainImage
   , dependsOn = dependsOn
+  , dependsOnKey = dependsOnKey
+  , dependsOnBuild = dependsOnBuild
   , dirtyWhen = dirtyWhen
 }
