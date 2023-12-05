@@ -60,9 +60,6 @@ let dependsOnKey = \(debVersion : DebVersion) -> \(profile : Profiles.Type) -> \
   } debVersion
 
 let dependsOn = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
-  dependsOnKey debVersion profile "upload-deb-pkg"
-
-let dependsOnBuild = \(debVersion : DebVersion) -> \(profile : Profiles.Type) ->
   dependsOnKey debVersion profile "build-deb-pkg"
 
 
@@ -117,7 +114,5 @@ in
   , toolchainRunner = toolchainRunner
   , toolchainImage = toolchainImage
   , dependsOn = dependsOn
-  , dependsOnKey = dependsOnKey
-  , dependsOnBuild = dependsOnBuild
   , dirtyWhen = dirtyWhen
 }

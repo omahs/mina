@@ -46,7 +46,10 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
               "MINA_BRANCH=$BUILDKITE_BRANCH",
               "MINA_COMMIT_SHA1=$BUILDKITE_COMMIT",
               "MINA_DEB_CODENAME=${DebianVersions.lowerName debVersion}"
-            ] "./buildkite/scripts/build-artifact.sh",
+            ] "./buildkite/scripts/build-artifact.sh" 
+            # [
+              Cmd.run "./buildkite/scripts/upload-deb.sh"
+            ],
             label = "Build Mina for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",
             key = "build-deb-pkg",
             target = Size.XLarge,
@@ -55,17 +58,6 @@ let pipeline : DebianVersions.DebVersion -> Profiles.Type ->  PipelineMode.Type 
                 exit_status = Command.ExitStatus.Code +2,
                 limit = Some 2
               } ] -- libp2p error
-          },
-
-        Command.build
-          Command.Config::{
-            commands  = [
-              Cmd.run "./buildkite/scripts/upload-deb.sh"
-            ],
-            depends_on=DebianVersions.dependsOnBuild debVersion profile,
-            label = "Upload Mina artifacts for ${DebianVersions.capitalName debVersion} ${Profiles.toSuffixUppercase profile}",
-            key = "upload-deb-pkg",
-            target = Size.Small
           },
 
         -- daemon berkeley image
