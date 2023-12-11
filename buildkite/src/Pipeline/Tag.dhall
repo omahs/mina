@@ -5,7 +5,8 @@
 let Prelude = ../External/Prelude.dhall
 let List/any = Prelude.List.any
 
-let Tag : Type = < Fast | Long | VeryLong | TearDown | Lint | Release | Test | Maintenance  >
+
+let Tag : Type = < Fast | Long | VeryLong | TearDown | Lint | Release | Test | Maintenance | Toolchain >
 
 let toNatural: Tag -> Natural = \(tag: Tag) -> 
   merge {
@@ -17,6 +18,7 @@ let toNatural: Tag -> Natural = \(tag: Tag) ->
     , Release = 6
     , Test = 7
     , Maintenance = 8
+    , Toolchain = 9
   } tag
 
 let equal: Tag -> Tag -> Bool = \(left: Tag) -> \(right: Tag) ->
@@ -39,6 +41,7 @@ let capitalName = \(tag : Tag) ->
     , Release = "Release"
     , Test = "Test" 
     , Maintenance = "Maintenance"
+    , Toolchain = "Toolchain" 
   } tag
 
 let lowerName = \(tag : Tag) ->
@@ -51,6 +54,7 @@ let lowerName = \(tag : Tag) ->
     , Release = "release"
     , Test = "test" 
     , Maintenance = "maintenance"
+    , Toolchain = "toolchain"
   } tag
 
 
