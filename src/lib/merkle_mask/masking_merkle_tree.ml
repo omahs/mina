@@ -214,21 +214,6 @@ module Make (Inputs : Inputs_intf.S) = struct
       | None ->
           (t.maps, get_parent t)
 
-    (** Either copies accumulated or initializes it with the parent being used as the [base]. *)
-    let to_accumulated t =
-      actualize_accumulated t ;
-      match (t.accumulated, t.parent) with
-      | Some { base; detached_next_signal; next; current }, _ ->
-          { base; detached_next_signal; next; current }
-      | None, Ok base ->
-          { base
-          ; next = t.maps
-          ; current = t.maps
-          ; detached_next_signal = t.detached_parent_signal
-          }
-      | None, Error loc ->
-          raise (Dangling_parent_reference (t.uuid, loc))
-
     let get_uuid t = assert_is_attached t ; t.uuid
 
     let get_directory t =
@@ -398,7 +383,7 @@ module Make (Inputs : Inputs_intf.S) = struct
         unhashed_accounts merkle_path_batch
       |> List.stable_sort ~compare:(fun (_, a, _) (_, b, _) ->
              Addr.compare a b )
-      |> List.remove_consecutive_duplicates ~which_to_keep:`Last
+      |> List.remove_consecutive_duplicates ~which_to_keep:`First
            ~equal:(fun (_, a, _) (_, b, _) -> Addr.equal a b)
       |> compute_merge_hashes
       |> List.iter ~f:(Tuple2.uncurry @@ self_set_hash_impl t)
@@ -408,6 +393,22 @@ module Make (Inputs : Inputs_intf.S) = struct
       if not @@ List.is_empty unhashed_accounts then (
         t.unhashed_accounts <- [] ;
         finalize_hashes_do t unhashed_accounts )
+
+    (** Either copies accumulated or initializes it with the parent being used as the [base]. *)
+    let to_accumulated t =
+      finalize_hashes t ;
+      actualize_accumulated t ;
+      match (t.accumulated, t.parent) with
+      | Some { base; detached_next_signal; next; current }, _ ->
+          { base; detached_next_signal; next; current }
+      | None, Ok base ->
+          { base
+          ; next = t.maps
+          ; current = t.maps
+          ; detached_next_signal = t.detached_parent_signal
+          }
+      | None, Error loc ->
+          raise (Dangling_parent_reference (t.uuid, loc))
 
     let self_set_hash t address hash =
       finalize_hashes t ;
@@ -458,8 +459,8 @@ module Make (Inputs : Inputs_intf.S) = struct
        parent *)
     let get t location =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
-      match Map.find maps.accounts location with
+      let { accounts; _ }, ancestor = maps_and_ancestor t in
+      match Map.find accounts location with
       | Some account ->
           Some account
       | None ->
@@ -509,9 +510,9 @@ module Make (Inputs : Inputs_intf.S) = struct
               (Addr.is_further_right ~than:current_address)
               Location.to_path_exn )
       in
-      let self_find ~maps id =
+      let self_find ~maps:{ accounts; _ } id =
         ( id
-        , match Map.find maps.accounts id with
+        , match Map.find accounts id with
           | None when is_empty id ->
               Some None
           | None ->
@@ -851,8 +852,8 @@ module Make (Inputs : Inputs_intf.S) = struct
 
     let token_owner t tid =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
-      match Map.find maps.token_owners tid with
+      let { token_owners; _ }, ancestor = maps_and_ancestor t in
+      match Map.find token_owners tid with
       | Some id ->
           Some id
       | None ->
@@ -860,18 +861,18 @@ module Make (Inputs : Inputs_intf.S) = struct
 
     let token_owners (t : t) : Account_id.Set.t =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
+      let { token_owners; _ }, ancestor = maps_and_ancestor t in
       let mask_owners =
-        Map.fold maps.token_owners ~init:Account_id.Set.empty
+        Map.fold token_owners ~init:Account_id.Set.empty
           ~f:(fun ~key:_tid ~data:owner acc -> Set.add acc owner)
       in
       Set.union mask_owners (Base.token_owners ancestor)
 
     let tokens t pk =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
+      let { locations; _ }, ancestor = maps_and_ancestor t in
       let mask_tokens =
-        Map.keys maps.locations
+        Map.keys locations
         |> List.filter_map ~f:(fun aid ->
                if Key.equal pk (Account_id.public_key aid) then
                  Some (Account_id.token_id aid)
@@ -1020,8 +1021,8 @@ module Make (Inputs : Inputs_intf.S) = struct
 
     let foldi_with_ignored_accounts t ignored_accounts ~init ~f =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
-      let locations_and_accounts = Map.to_alist maps.accounts in
+      let { accounts; _ }, ancestor = maps_and_ancestor t in
+      let locations_and_accounts = Map.to_alist accounts in
       (* parent should ignore accounts in this mask *)
       let mask_accounts =
         List.map locations_and_accounts ~f:(fun (_loc, acct) ->
@@ -1069,6 +1070,7 @@ module Make (Inputs : Inputs_intf.S) = struct
 
       let address_in_mask t addr =
         assert_is_attached t ;
+        finalize_hashes t ;
         Option.is_some (Map.find t.maps.hashes addr)
 
       let current_location t = t.current_location
@@ -1088,8 +1090,8 @@ module Make (Inputs : Inputs_intf.S) = struct
     (* NB: updates the mutable current_location field in t *)
     let get_or_create_account t account_id account =
       assert_is_attached t ;
-      let maps, ancestor = maps_and_ancestor t in
-      match Map.find maps.locations account_id with
+      let { locations; _ }, ancestor = maps_and_ancestor t in
+      match Map.find locations account_id with
       | None -> (
           (* not in mask, maybe in parent *)
           match Base.location_of_account ancestor account_id with
@@ -1127,6 +1129,7 @@ module Make (Inputs : Inputs_intf.S) = struct
     assert (Int.equal t.depth (Base.depth parent)) ;
     t.parent <- Ok parent ;
     t.current_location <- Attached.last_filled t ;
+    Attached.finalize_hashes t ;
     (* If [t.accumulated] isn't empty, then this mask had a parent before
        and now we just reparent it (which may only happen if both old and new parents
         have the same merkle root (and some masks in between may have been removed),
