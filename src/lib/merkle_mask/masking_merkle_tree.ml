@@ -104,7 +104,7 @@ module Make (Inputs : Inputs_intf.S) = struct
              This is used as a lookup cache. *)
     ; mutable accumulated : (accumulated_t[@sexp.opaque]) option
     ; mutable is_committing : bool
-    ; mutable unhashed_accounts : (Hash.t * Location.t) list
+    ; mutable unhashed_accounts : (Account.t option * Location.t) list
     }
   [@@deriving sexp]
 
@@ -315,7 +315,10 @@ module Make (Inputs : Inputs_intf.S) = struct
       Fn.compose snd @@ List.fold_map ~init ~f
 
     let compute_merge_hashes :
-           (Hash.t * Addr.t * [ `Left of Hash.t | `Right of Hash.t ] list) list
+           ( Account.t option
+           * Addr.t
+           * [ `Left of Hash.t | `Right of Hash.t ] list )
+           list
         -> (Addr.t * Hash.t) list =
       let process_pair height = function
         | (lh, laddr, `Left _ :: lpath), (rh, _, `Right _ :: _rpath) ->
@@ -364,7 +367,10 @@ module Make (Inputs : Inputs_intf.S) = struct
         | _ ->
             impl acc' (height + 1) (converge height task)
       in
-      impl [] 0
+      let hash_account =
+        Option.value_map ~default:Hash.empty_account ~f:Hash.hash_account
+      in
+      Fn.compose (impl [] 0) (List.map ~f:(Tuple3.map_fst ~f:hash_account))
 
     let finalize_hashes_do t unhashed_accounts =
       let merkle_path_batch =
@@ -379,7 +385,7 @@ module Make (Inputs : Inputs_intf.S) = struct
       in
       (* let _task = *)
       List.map2_exn
-        ~f:(fun (h, loc) p -> (h, Location.to_path_exn loc, p))
+        ~f:(fun (a, loc) p -> (a, Location.to_path_exn loc, p))
         unhashed_accounts merkle_path_batch
       |> List.stable_sort ~compare:(fun (_, a, _) (_, b, _) ->
              Addr.compare a b )
@@ -639,9 +645,7 @@ module Make (Inputs : Inputs_intf.S) = struct
                 t.current_location <- Some prev_loc
             | None ->
                 t.current_location <- None ) ;
-      (* update hashes *)
-      let account_hash = Hash.empty_account in
-      t.unhashed_accounts <- (account_hash, location) :: t.unhashed_accounts
+      t.unhashed_accounts <- (None, location) :: t.unhashed_accounts
 
     let set_account_unsafe t location account =
       assert_is_attached t ;
@@ -657,9 +661,7 @@ module Make (Inputs : Inputs_intf.S) = struct
     let set t location account =
       assert_is_attached t ;
       set_account_unsafe t location account ;
-      (* Update merkle path. *)
-      let account_hash = Hash.hash_account account in
-      t.unhashed_accounts <- (account_hash, location) :: t.unhashed_accounts
+      t.unhashed_accounts <- (Some account, location) :: t.unhashed_accounts
 
     (* if the mask's parent sets an account, we can prune an entry in the mask
        if the account in the parent is the same in the mask
