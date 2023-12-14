@@ -1,5 +1,5 @@
 let ArtifactPipelines = ../../Command/MinaArtifact.dhall
-let BuildFlags = ../Constants/BuildFlags.dhall
+let BuildFlags = ../../Constants/BuildFlags.dhall
 let Pipeline = ../../Pipeline/Dsl.dhall
 
 in
