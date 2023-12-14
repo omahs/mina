@@ -1,12 +1,10 @@
 let ArtifactPipelines = ../../Command/MinaArtifact.dhall
+let BuildFlags = ../Constants/BuildFlags.dhall
 let Pipeline = ../../Pipeline/Dsl.dhall
 
 in
 
 Pipeline.build (ArtifactPipelines.pipeline ArtifactPipelines.ArtifactSpec::{
-    extraEnv =  ["DUNE_INSTRUMENT_WITH=bisect_ppx"],
-    buildOnlyEssentialDockers = True,
-    jobSuffix =  "Instrumentated",
-    serviceSuffix = "-instrumented",
-    stepSuffix = "-instrumented"
+    buildFlags = BuildFlags.Type.Instrumented,
+    buildOnlyEssentialDockers = True
 })

@@ -19,27 +19,22 @@ let Libp2p = ./Libp2pHelperBuild.dhall
 let DockerImage = ./DockerImage.dhall
 let DebianVersions = ../Constants/DebianVersions.dhall
 let Profiles = ../Constants/Profiles.dhall
-  
+let BuildFlags = ../Constants/BuildFlags.dhall
+
 let ArtifactSpec = {
   Type = {
     debVersion : DebianVersions.DebVersion,
     profile: Profiles.Type,
     mode: PipelineMode.Type,
-    extraEnv: List Text,
-    buildOnlyEssentialDockers: Bool,
-    jobSuffix: Text,
-    stepSuffix: Text,
-    serviceSuffix: Text
+    buildFlags: BuildFlags.Type,
+    buildOnlyEssentialDockers: Bool
   },
   default = {
     debVersion = DebianVersions.DebVersion.Bullseye,
     profile = Profiles.Type.Standard,
     mode = PipelineMode.Type.PullRequest,
-    extraEnv = ([]: List Text),
+    buildFlags: BuildFlags.Type.Standard,
     buildOnlyEssentialDockers = False,
-    jobSuffix = "",
-    stepSuffix = "",
-    serviceSuffix = ""
   }
 }
 
@@ -50,7 +45,7 @@ let pipeline =
         JobSpec::{
           dirtyWhen = DebianVersions.dirtyWhen spec.debVersion,
           path = "Release",
-          name = "MinaArtifact${DebianVersions.capitalName spec.debVersion}${Profiles.toSuffixUppercase spec.profile}${spec.jobSuffix}",
+          name = "MinaArtifact${DebianVersions.capitalName spec.debVersion}${Profiles.toSuffixUppercase spec.profile}${BuildFlags.toSuffixUppercase spec.buildFlags}",
           tags = [ PipelineTag.Type.Long, PipelineTag.Type.Release ],
           mode = spec.mode
         },
@@ -65,9 +60,9 @@ let pipeline =
               "MINA_BRANCH=$BUILDKITE_BRANCH",
               "MINA_COMMIT_SHA1=$BUILDKITE_COMMIT",
               "MINA_DEB_CODENAME=${DebianVersions.lowerName spec.debVersion}"
-            ] # spec.extraEnv)
+            ] # BuildFlags.buildEnvs specs.buildFlags )
             "./buildkite/scripts/build-artifact.sh",
-            label = "Build Mina for ${DebianVersions.capitalName spec.debVersion} ${Profiles.toSuffixUppercase spec.profile}${spec.jobSuffix}",
+            label = "Build Mina for ${DebianVersions.capitalName spec.debVersion} ${Profiles.toSuffixUppercase spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}",
             key = "build-deb-pkg",
             target = Size.XLarge,
             retries = [
@@ -84,7 +79,7 @@ let pipeline =
           network="berkeley",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
           deb_profile="${Profiles.lowerName spec.profile}",
-          step_key="daemon-berkeley-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${spec.stepSuffix}-docker-image"
+          step_key="daemon-berkeley-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image"
         }
 
         in
@@ -96,7 +91,7 @@ let pipeline =
           deps=DebianVersions.dependsOn spec.debVersion spec.profile,
           service="mina-test-executive",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
-          step_key="test-executive-${DebianVersions.lowerName spec.debVersion}${spec.stepSuffix}-docker-image",
+          step_key="test-executive-${DebianVersions.lowerName spec.debVersion}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image",
           `if`=Some "'${Profiles.lowerName spec.profile}' == 'standard' && '${Prelude.Bool.show spec.buildOnlyEssentialDockers}' == 'False'"
         }
         in
@@ -108,7 +103,7 @@ let pipeline =
           service="mina-batch-txn",
           network="berkeley",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
-          step_key="batch-txn-${DebianVersions.lowerName spec.debVersion}${spec.stepSuffix}-docker-image",
+          step_key="batch-txn-${DebianVersions.lowerName spec.debVersion}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image",
           `if`=Some "'${Profiles.lowerName spec.profile}' == 'standard' && '${Prelude.Bool.show spec.buildOnlyEssentialDockers}' == 'False'"
         }
         in
@@ -120,7 +115,7 @@ let pipeline =
           service="mina-archive${spec.serviceSuffix}",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
           deb_profile="${Profiles.lowerName spec.profile}",
-          step_key="archive-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${spec.stepSuffix}-docker-image"
+          step_key="archive-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image"
         }
         in
         DockerImage.generateStep archiveSpec,
@@ -131,7 +126,7 @@ let pipeline =
           service="mina-rosetta",
           network="berkeley",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
-          step_key="rosetta-${DebianVersions.lowerName spec.debVersion}${spec.stepSuffix}-docker-image",
+          step_key="rosetta-${DebianVersions.lowerName spec.debVersion}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image",
           `if`=Some "'${Profiles.lowerName spec.profile}' == 'standard' && '${Prelude.Bool.show spec.buildOnlyEssentialDockers}' == 'False'"
         }
         in
@@ -142,7 +137,7 @@ let pipeline =
           deps=DebianVersions.dependsOn spec.debVersion spec.profile,
           service="mina-zkapp-test-transaction",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
-          step_key="zkapp-test-transaction-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${spec.stepSuffix}-docker-image",
+          step_key="zkapp-test-transaction-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image",
           `if`=Some "'${Profiles.lowerName spec.profile}' == 'standard' && '${Prelude.Bool.show spec.buildOnlyEssentialDockers}' == 'False'"
         }
 
