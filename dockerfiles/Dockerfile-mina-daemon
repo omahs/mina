@@ -18,9 +18,9 @@ ENV INSTRUMENTATION_SUFFIX=${build_profile:+-${build_profile}}
 # possible values:
 # - mina-berkeley
 # - mina-berkeley-lightnet
-# - mina-berkeley-instrumented etc.
+# - mina-instrumented-berkeley etc.
 
-ENV MINA_DEB=mina-${network}${PROFILE_SUFFIX}${INSTRUMENTATION_SUFFIX}
+ENV MINA_DEB=mina${INSTRUMENTATION_SUFFIX}-${network}${PROFILE_SUFFIX}
 
 ENV DEBIAN_FRONTEND noninteractive
 
