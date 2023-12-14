@@ -75,7 +75,7 @@ let pipeline =
         -- daemon berkeley image
         let daemonBerkeleySpec = DockerImage.ReleaseSpec::{
           deps=DebianVersions.dependsOn spec.debVersion spec.profile,
-          service="mina-daemon${spec.serviceSuffix}",
+          service="mina-daemon${BuildFlags.toLabelSegment spec.buildFlags}",
           network="berkeley",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
           deb_profile="${Profiles.lowerName spec.profile}",
@@ -112,7 +112,7 @@ let pipeline =
         -- archive image
         let archiveSpec = DockerImage.ReleaseSpec::{
           deps=DebianVersions.dependsOn spec.debVersion spec.profile,
-          service="mina-archive${spec.serviceSuffix}",
+          service="mina-archive${BuildFlags.toLabelSegment spec.buildFlags}",
           deb_codename="${DebianVersions.lowerName spec.debVersion}",
           deb_profile="${Profiles.lowerName spec.profile}",
           step_key="archive-${DebianVersions.lowerName spec.debVersion}${Profiles.toLabelSegment spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}-docker-image"
