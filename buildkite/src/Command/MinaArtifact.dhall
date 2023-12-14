@@ -34,7 +34,7 @@ let ArtifactSpec = {
     profile = Profiles.Type.Standard,
     mode = PipelineMode.Type.PullRequest,
     buildFlags = BuildFlags.Type.Standard,
-    buildOnlyEssentialDockers = False,
+    buildOnlyEssentialDockers = False
   }
 }
 
