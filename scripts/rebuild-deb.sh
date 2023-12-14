@@ -191,6 +191,26 @@ copy_common_daemon_configs() {
 
 }
 
+
+generate_deb_name() {
+  if [ -z ${DUNE_INSTRUMENT_WITH+x} ]; then
+    MINA_DEB_NAME=mina-${1}
+  else
+    MINA_DEB_NAME=mina-instrumented-${1}
+  fi 
+
+  # Determina suffix for mina name. To preserve backward compatibility devnet profile won't have any suffix. 
+  # For others profiles we are adding suffix. For example '-lightnet'
+  case "${DUNE_PROFILE}" in
+    devnet)
+      ;;
+    *)
+      MINA_DEB_NAME="${MINA_DEB_NAME}-${DUNE_PROFILE}"
+      ;;
+  esac
+
+}
+
 ##################################### GENERATE KEYPAIR PACKAGE #######################################
 if ${MINA_BUILD_MAINNET} # only builds on mainnet-like branches
 then
@@ -258,14 +278,16 @@ build_deb mina-test-suite
 if ${MINA_BUILD_MAINNET} # only builds on mainnet-like branches
 then
 
+  generate_deb_name mainnet
+
   echo "------------------------------------------------------------"
   echo "--- Building mainnet deb without keys:"
 
-  create_control_file mina-mainnet "${SHARED_DEPS}${DAEMON_DEPS}" 'Mina Protocol Client and Daemon'
+  create_control_file ${MINA_DEB_NAME} "${SHARED_DEPS}${DAEMON_DEPS}" 'Mina Protocol Client and Daemon'
 
   copy_common_daemon_configs mainnet mainnet 'mina-seed-lists/mainnet_seeds.txt'
 
-  build_deb mina-mainnet
+  build_deb ${MINA_DEB_NAME}
 
 fi # only builds on mainnet-like branches
 ##################################### END MAINNET PACKAGE #######################################
@@ -274,14 +296,16 @@ fi # only builds on mainnet-like branches
 if ${MINA_BUILD_MAINNET} # only builds on mainnet-like branches
 then
 
+  generate_deb_name devnet
+
   echo "------------------------------------------------------------"
   echo "--- Building testnet signatures deb without keys:"
 
-  copy_control_file mina-devnet "${SHARED_DEPS}${DAEMON_DEPS}" 'Mina Protocol Client and Daemon for the Devnet Network'
+  copy_control_file ${MINA_DEB_NAME} "${SHARED_DEPS}${DAEMON_DEPS}" 'Mina Protocol Client and Daemon for the Devnet Network'
 
   copy_common_daemon_configs devnet testnet 'seed-lists/devnet_seeds.txt'
 
-  build_deb mina-devnet
+  build_deb ${MINA_DEB_NAME}
 
 fi # only builds on mainnet-like branches
 ##################################### END DEVNET PACKAGE #######################################
@@ -300,8 +324,30 @@ build_deb mina-zkapp-test-transaction
 ##################################### END ZKAPP TEST TXN PACKAGE #######################################
 
 ##################################### BERKELEY PACKAGE #######################################
+
+if [ -z ${DUNE_INSTRUMENT_WITH+x} ]; then
+MINA_DEB_NAME=mina-berkeley
+else
+MINA_DEB_NAME=mina-instrumented-berkeley
+fi 
+
+# Determina suffix for mina name. To preserve backward compatibility devnet profile won't have any suffix. 
+# For others profiles we are adding suffix. For example '-lightnet'
+case "${DUNE_PROFILE}" in
+  devnet)
+    ;;
+  *)
+    MINA_DEB_NAME="${MINA_DEB_NAME}-${DUNE_PROFILE}"
+    ;;
+esac
+
+
+
+
 echo "------------------------------------------------------------"
 echo "--- Building Mina Berkeley testnet signatures deb without keys:"
+
+generate_deb_name berkeley
 
 mkdir -p "${BUILDDIR}/DEBIAN"
 create_control_file "${MINA_DEB_NAME}" "${SHARED_DEPS}${DAEMON_DEPS}" 'Mina Protocol Client and Daemon'
