@@ -43,12 +43,12 @@ Pipeline.build
         Command.Config::{
           commands = [
             Cmd.run ("export MINA_DEB_CODENAME=bullseye && source ./buildkite/scripts/export-git-env-vars.sh && echo \\\${MINA_DOCKER_TAG}"),
-            Cmd.runInDocker Cmd.Docker::{image="gcr.io/o1labs-192920/mina-rosetta:\\\${MINA_DOCKER_TAG}", entrypoint=" --entrypoint buildkite/scripts/rosetta-integration-tests-fast.sh"} "bash"
+            Cmd.runInDocker Cmd.Docker::{image="gcr.io/o1labs-192920/mina-rosetta-lightnet:\\\${MINA_DOCKER_TAG}", entrypoint=" --entrypoint buildkite/scripts/rosetta-integration-tests-fast.sh"} "bash"
           ],
           label = "Rosetta integration tests Bullseye"
           , key = "rosetta-integration-tests-bullseye"
           , target = Size.Small
-          , depends_on = Dockers.dependsOn Dockers.Type.Bullseye Profiles.Type.Standard "rosetta"
+          , depends_on = Dockers.dependsOn Dockers.Type.Bullseye Profiles.Type.Lightnet "rosetta"
         }
     ]
   }
