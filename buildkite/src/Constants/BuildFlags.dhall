@@ -2,51 +2,51 @@ let Prelude = ../External/Prelude.dhall
 
 let BuildFlags : Type = < Standard | Instrumented >
 
-let capitalName = \(buildFlag : BuildFlag) ->
+let capitalName = \(buildFlags : BuildFlags) ->
   merge {
     Standard = "Standard"
     , Instrumented = "Instrumented"
-  } buildFlag
+  } buildFlags
 
-let lowerName = \(buildFlag : BuildFlag) ->
+let lowerName = \(buildFlags : BuildFlags) ->
   merge {
     Standard = "standard"
     , Instrumented = "instrumented"
-  } buildFlag
+  } buildFlags
 
-let buildEnvs = \(buildFlag : BuildFlag) ->
+let buildEnvs = \(buildFlags : BuildFlags) ->
   merge {
-    Standard = []
+    Standard = ([] : List Text )
     , Instrumented = ["DUNE_INSTRUMENT_WITH=bisect_ppx"]
-  } buildFlag
+  } buildFlags
 
-let toSuffixUppercase = \(buildFlag : BuildFlag) ->
+let toSuffixUppercase = \(buildFlags : BuildFlags) ->
   merge {
     Standard = ""
     , Instrumented = "Instrumented"
-  } buildFlag
+  } buildFlags
 
-let toSuffixLowercase = \(buildFlag : BuildFlag) ->
+let toSuffixLowercase = \(buildFlags : BuildFlags) ->
   merge {
     Standard = ""
     , Instrumented = "instrumented"
-  } buildFlag
+  } buildFlags
 
-let toLabelSegment = \(buildFlag : BuildFlag) ->
+let toLabelSegment = \(buildFlags : BuildFlags) ->
   merge {
     Standard = ""
     , Instrumented = "-instrumented"
-  } buildFlag
+  } buildFlags
 
 
 
 in
 
 {
-  Type = BuildFlag
+  Type = BuildFlags
   , capitalName = capitalName
   , lowerName = lowerName
-  , duneBuildFlag = duneBuildFlag
+  , buildEnvs = buildEnvs
   , toSuffixUppercase = toSuffixUppercase
   , toSuffixLowercase = toSuffixLowercase
   , toLabelSegment = toLabelSegment

@@ -33,7 +33,7 @@ let ArtifactSpec = {
     debVersion = DebianVersions.DebVersion.Bullseye,
     profile = Profiles.Type.Standard,
     mode = PipelineMode.Type.PullRequest,
-    buildFlags: BuildFlags.Type.Standard,
+    buildFlags = BuildFlags.Type.Standard,
     buildOnlyEssentialDockers = False,
   }
 }
@@ -60,7 +60,7 @@ let pipeline =
               "MINA_BRANCH=$BUILDKITE_BRANCH",
               "MINA_COMMIT_SHA1=$BUILDKITE_COMMIT",
               "MINA_DEB_CODENAME=${DebianVersions.lowerName spec.debVersion}"
-            ] # BuildFlags.buildEnvs specs.buildFlags )
+            ] # BuildFlags.buildEnvs spec.buildFlags )
             "./buildkite/scripts/build-artifact.sh",
             label = "Build Mina for ${DebianVersions.capitalName spec.debVersion} ${Profiles.toSuffixUppercase spec.profile}${BuildFlags.toLabelSegment spec.buildFlags}",
             key = "build-deb-pkg",
