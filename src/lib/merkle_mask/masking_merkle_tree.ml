@@ -373,7 +373,7 @@ module Make (Inputs : Inputs_intf.S) = struct
       Fn.compose (impl [] 0) (List.map ~f:(Tuple3.map_fst ~f:hash_account))
 
     let finalize_hashes_do t unhashed_accounts =
-      let merkle_path_batch =
+      let with_merkle_path_batch accs =
         let { hashes; _ }, ancestor = maps_and_ancestor t in
         path_batch_impl
           ~base_lookup:(Base.merkle_path_batch ancestor)
@@ -381,17 +381,15 @@ module Make (Inputs : Inputs_intf.S) = struct
             (self_merkle_path ~current_location:t.current_location
                ~depth:t.depth ~hashes )
           ~fixup_path:(fixup_merkle_path ~hashes)
-          (List.map ~f:snd unhashed_accounts)
+          (List.map ~f:snd accs)
+        |> List.map2_exn accs ~f:(fun (a, loc) p ->
+               (a, Location.to_path_exn loc, p) )
       in
-      (* let _task = *)
-      List.map2_exn
-        ~f:(fun (a, loc) p -> (a, Location.to_path_exn loc, p))
-        unhashed_accounts merkle_path_batch
-      |> List.stable_sort ~compare:(fun (_, a, _) (_, b, _) ->
-             Addr.compare a b )
+      let on_snd f (_, a) (_, b) = f a b in
+      List.stable_sort ~compare:(on_snd Location.compare) unhashed_accounts
       |> List.remove_consecutive_duplicates ~which_to_keep:`First
-           ~equal:(fun (_, a, _) (_, b, _) -> Addr.equal a b)
-      |> compute_merge_hashes
+           ~equal:(on_snd Location.equal)
+      |> with_merkle_path_batch |> compute_merge_hashes
       |> List.iter ~f:(Tuple2.uncurry @@ self_set_hash_impl t)
 
     let finalize_hashes t =
@@ -938,6 +936,15 @@ module Make (Inputs : Inputs_intf.S) = struct
                 (Account_id.Set.of_list empty_keys)
           } ) ;
       let accounts = get_batch t non_empty_locations in
+      let empty_locations =
+        Option.value_map (last_filled t) ~default:[] ~f:(fun init ->
+            snd
+            @@ List.fold_map empty_keys ~init ~f:(fun loc _ ->
+                   Location.next loc
+                   |> Option.value_map ~default:(loc, loc) ~f:(fun loc' ->
+                          (loc', loc') ) ) )
+      in
+      let locations = empty_locations @ non_empty_locations in
       let all_hash_locations =
         let rec generate_locations account_locations acc =
           match account_locations with
@@ -958,7 +965,7 @@ module Make (Inputs : Inputs_intf.S) = struct
                   generate_locations account_locations
                     (Location.Hash address :: acc) )
         in
-        generate_locations non_empty_locations []
+        generate_locations locations []
       in
       let all_hashes = get_hash_batch_exn t all_hash_locations in
       (* Batch import merkle paths and self hashes. *)
@@ -1092,31 +1099,38 @@ module Make (Inputs : Inputs_intf.S) = struct
     (* NB: updates the mutable current_location field in t *)
     let get_or_create_account t account_id account =
       assert_is_attached t ;
-      let { locations; _ }, ancestor = maps_and_ancestor t in
+      let { locations; non_existent_accounts; _ }, ancestor =
+        maps_and_ancestor t
+      in
+      let add_location () =
+        (* not in parent, create new location *)
+        let maybe_location =
+          match t.current_location with
+          | None ->
+              Some (first_location ~ledger_depth:t.depth)
+          | Some loc ->
+              Location.next loc
+        in
+        match maybe_location with
+        | None ->
+            Or_error.error_string "Db_error.Out_of_leaves"
+        | Some location ->
+            (* `set` calls `self_set_location`, which updates
+               the current location
+            *)
+            set t location account ;
+            Ok (`Added, location)
+      in
       match Map.find locations account_id with
       | None -> (
-          (* not in mask, maybe in parent *)
-          match Base.location_of_account ancestor account_id with
-          | Some location ->
-              Ok (`Existed, location)
-          | None -> (
-              (* not in parent, create new location *)
-              let maybe_location =
-                match last_filled t with
-                | None ->
-                    Some (first_location ~ledger_depth:t.depth)
-                | Some loc ->
-                    Location.next loc
-              in
-              match maybe_location with
-              | None ->
-                  Or_error.error_string "Db_error.Out_of_leaves"
-              | Some location ->
-                  (* `set` calls `self_set_location`, which updates
-                     the current location
-                  *)
-                  set t location account ;
-                  Ok (`Added, location) ) )
+          if Set.mem non_existent_accounts account_id then add_location ()
+          else
+            (* not in mask, maybe in parent *)
+            match Base.location_of_account ancestor account_id with
+            | Some location ->
+                Ok (`Existed, location)
+            | None ->
+                add_location () )
       | Some location ->
           Ok (`Existed, location)
 
