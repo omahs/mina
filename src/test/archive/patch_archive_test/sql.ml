@@ -2,18 +2,22 @@ module Copy_database = struct
   let run_drop_db (module Conn : Caqti_async.CONNECTION) ~copy_db = 
     Conn.exec
       (Caqti_request.exec
-         Caqti_type.string
-         {sql| DROP databse ?
-         |sql} )
-      (copy_db)
+         Caqti_type.unit
+         (Printf.sprintf 
+         {sql| DROP database %s
+         |sql} copy_db )
+      ) ()
  
   let run (module Conn : Caqti_async.CONNECTION) ~original_db ~copy_db =
     Conn.exec
     (Caqti_request.exec
-       Caqti_type.(tup2 string string)
-       {sql| CREATE DATABASE $1 WITH TEMPLATE $1
-       |sql} )
-    (copy_db, original_db)
+       Caqti_type.unit
+       (Printf.sprintf
+          {sql| CREATE DATABASE %s with TEMPLATE %s
+                 |sql}
+                 copy_db original_db 
+                 )  ) ()
+    
 
 end
 
@@ -40,7 +44,7 @@ module Block = struct
     Conn.exec
     (Caqti_request.exec
        Caqti_type.int
-       {sql| UPDATE block SET parent_state_hash = NULL where id = ?
+       {sql| UPDATE blocks SET parent_hash = NULL where id = ?
        |sql} )
     id
 
@@ -48,7 +52,7 @@ module Block = struct
     Conn.exec
     (Caqti_request.exec
        Caqti_type.string
-       {sql| DELETE CASCADE block where state_hash = ?
+       {sql| DELETE CASCADE blocks where state_hash = ?
        |sql} )
     state_hash
 end
