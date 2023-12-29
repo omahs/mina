@@ -24,6 +24,7 @@ PG_PORT=5433
 PG_PASSWORD=somepassword
 DOCKER_IMAGE=12.4-alpine
 CONTAINER_FILE=docker.container
+DUMP_FOLDER=/tmp/replayer_test
 
 function cleanup () {
     CONTAINER=`cat $CONTAINER_FILE`
@@ -57,11 +58,18 @@ echo "Populating archive database"
 
 NETWORK_GATEWAY=$(docker network inspect -f "{{(index .IPAM.Config 0).Gateway}}" replayer)
 
+ARCHIVE_DOCKER=gcr.io/o1labs-192920/mina-archive:$MINA_DOCKER_TAG
 PG_CONN="postgres://postgres:$PG_PASSWORD@$NETWORK_GATEWAY:$PG_PORT/$DB"
 
 
 docker exec replayer-postgres psql $PG_CONN -f $TEST_DIR/test/archive_db.sql
 
-docker run --network replayer --volume $BUILDKITE_BUILD_CHECKOUT_PATH:/workdir gcr.io/o1labs-192920/mina-archive:$MINA_DOCKER_TAG /workdir/scripts/replayer-test.sh -d $TEST_DIR -a mina-replayer -p $PG_CONN
+
+mkdir -p $DUMP_FOLDER
+docker run --volume $BUILDKITE_BUILD_CHECKOUT_PATH:/workdir $ARCHIVE_DOCKER mina-dump-blocks sequence --size 40 $DUMP_FOLDER
+
+PRECOMPUTED_BLOCKS=$(ls $DUMP_FOLDER/mainnet_*.json | xargs )
+docker run --network replayer  --volume $BUILDKITE_BUILD_CHECKOUT_PATH:/workdir $ARCHIVE_DOCKER mina-dump-blocks --archive-uri $PG_CONN $PRECOMPUTED_BLOCKS -precomputed
+docker run --network replayer --volume $BUILDKITE_BUILD_CHECKOUT_PATH:/workdir $ARCHIVE_DOCKER /workdir/scripts/replayer-test.sh -d $TEST_DIR -a mina-replayer -p $PG_CONN
 
 cleanup

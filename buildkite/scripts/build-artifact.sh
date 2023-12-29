@@ -28,6 +28,7 @@ dune build "--profile=${DUNE_PROFILE}" \
   src/app/replayer/replayer.exe \
   src/app/extract_blocks/extract_blocks.exe \
   src/app/archive_blocks/archive_blocks.exe \
+  src/app/dump_blocks/dump_blocks.exe \
   src/app/berkeley_migration/berkeley_migration.exe \
   src/app/berkeley_account_tables/berkeley_account_tables.exe \
   src/app/batch_txn_tool/batch_txn_tool.exe \
