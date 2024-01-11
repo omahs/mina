@@ -75,22 +75,6 @@ module Step = struct
          in
          values |> List.filter_map ~f )
 
-    let%test_unit "preserve circuit behavior for Step" =
-      let expected_list =
-        [ ("45560315531506369815346746415080538112", false)
-        ; ("45560315531506369815346746415080538113", false)
-        ; ( "14474011154664524427946373126085988481727088556502330059655218120611762012161"
-          , true )
-        ; ( "14474011154664524427946373126085988481727088556502330059655218120611762012161"
-          , true )
-        ]
-      in
-      let str_list =
-        List.map (Lazy.force forbidden_shifted_values) ~f:(fun (a, b) ->
-            (Tick.Field.to_string a, b) )
-      in
-      assert ([%equal: (string * bool) list] str_list expected_list)
-
     let typ_unchecked : (t, Constant.t) Typ.t =
       Typ.transport
         (Typ.tuple2 Field.typ Boolean.typ)
@@ -128,7 +112,7 @@ module Step = struct
   module Digest = Digest.Make (Impl)
   module Challenge = Challenge.Make (Impl)
 
-  let input ~proofs_verified ~wrap_rounds ~feature_flags =
+  let input ~proofs_verified ~wrap_rounds =
     let open Types.Step.Statement in
     let spec = spec proofs_verified wrap_rounds in
     let (T (typ, f, f_inv)) =
@@ -186,17 +170,6 @@ module Wrap = struct
            else Some Impl.Bigint.(to_field (of_bignum_bigint x))
          in
          values |> List.filter_map ~f )
-
-    let%test_unit "preserve circuit behavior for Wrap" =
-      let expected_list =
-        [ "91120631062839412180561524743370440705"
-        ; "91120631062839412180561524743370440706"
-        ]
-      in
-      let str_list =
-        List.map (Lazy.force forbidden_shifted_values) ~f:Wrap_field.to_string
-      in
-      assert ([%equal: string list] str_list expected_list)
 
     let typ_unchecked, check =
       (* Tick -> Tock *)
@@ -258,18 +231,11 @@ module Wrap = struct
     in
     let typ =
       Typ.transport typ
-        ~there:(In_circuit.to_data ~option_map:Option.map ~to_opt:Fn.id)
-        ~back:
-          (In_circuit.of_data ~feature_flags ~option_map:Option.map
-             ~of_opt:Opt.to_option )
+        ~there:(In_circuit.to_data ~option_map:Option.map)
+        ~back:(In_circuit.of_data ~option_map:Option.map)
     in
     Spec.ETyp.T
       ( typ
-      , (fun x ->
-          In_circuit.of_data ~feature_flags ~option_map:Opt.map (f x)
-            ~of_opt:Fn.id )
-      , fun x ->
-          f_inv
-            (In_circuit.to_data ~option_map:Opt.map x
-               ~to_opt:Opt.to_option_unsafe ) )
+      , (fun x -> In_circuit.of_data ~option_map:Opt.map (f x))
+      , fun x -> f_inv (In_circuit.to_data ~option_map:Opt.map x) )
 end

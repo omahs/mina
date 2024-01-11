@@ -31,6 +31,8 @@ module Step : sig
 
     module Constant = Backend.Tock.Field
 
+    val forbidden_shifted_values : (Impl.field * bool) list lazy_t
+
     val typ_unchecked : (t, Constant.t) Typ.t
 
     val typ : (t, Constant.t, Internal_Basic.field) Snarky_backendless.Typ.t
@@ -39,7 +41,6 @@ module Step : sig
   val input :
        proofs_verified:'a Pickles_types.Nat.t
     -> wrap_rounds:'b Pickles_types.Nat.t
-    -> feature_flags:Opt.Flag.t Plonk_types.Features.Full.t
     -> ( ( ( ( Impl.Field.t
              , Impl.Field.t Composition_types.Scalar_challenge.t
              , Other_field.t Pickles_types.Shifted_value.Type2.t
@@ -119,6 +120,8 @@ module Wrap : sig
     type t = Field.t
 
     module Constant = Backend.Tick.Field
+
+    val forbidden_shifted_values : Impl.field list lazy_t
 
     val typ_unchecked : (Impl.Field.t, Backend.Tick.Field.t) Impl.Typ.t
 
