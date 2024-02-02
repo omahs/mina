@@ -1,8 +1,6 @@
 {
   "executor": "dune",
   "paths": {
-    "berkeley_migration":"src/app/berkeley_migration/berkeley_migration.exe",
-    "replayer":"src/app/replayer/replayer.exe",
     "mainnet_genesis_ledger": "genesis_ledgers/mainnet.json",
     "mainnet_genesis_block": "src/test/hardfork/test_data/mainnet_migration/genesis_data_only.sql",
     "random_data_dump": "src/test/hardfork/test_data/random_migration/dump.sql",

@@ -1,5 +1,6 @@
-(tests
- (names archive_migration_tests)
+(library
+ (name mina_automation)
+ (public_name mina_automation)
  (libraries
    ;; opam libraries
    async_kernel
@@ -13,11 +14,9 @@
    yojson
    result
    uri
-   caqti
-   caqti-async
-   caqti-driver-postgresql
    ;; mina libraries
    init
+   logger
    currency
    integration_test_lib
    mina_runtime_config
@@ -26,7 +25,6 @@
    mina_base
    mina_block
    cmdliner
-   mina_automation
  )
  (instrumentation (backend bisect_ppx))
  (preprocess (pps ppx_version ppx_jane ppx_deriving_yojson ppx_compare))

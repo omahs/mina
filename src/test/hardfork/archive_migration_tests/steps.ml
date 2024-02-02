@@ -3,202 +3,65 @@ open Integration_test_lib
 open Core
 open Settings
 open Yojson.Basic.Util
-open Docker_api_client
-
-module ReplayerOutput = struct
-  type t =
-    { target_epoch_ledgers_state_hash : string
-    ; target_fork_state_hash : string
-    ; target_genesis_ledger : Runtime_config.Ledger.t option
-    ; target_epoch_data : Runtime_config.Epoch_data.t option
-    }
-  [@@deriving yojson]
-end
-
-module BerkeleyTablesAppInput = struct
-  type t =
-    { target_epoch_ledgers_state_hash : string option [@default None]
-    ; start_slot_since_genesis : int64 [@default 0L]
-    ; genesis_ledger : Runtime_config.Ledger.t
-    ; first_pass_ledger_hashes : Mina_base.Ledger_hash.t list [@default []]
-    ; last_snarked_ledger_hash : Mina_base.Ledger_hash.t option [@default None]
-    }
-  [@@deriving yojson]
-
-  let of_runtime_config_file_exn config target_epoch_ledgers_state_hash =
-    let runtime_config =
-      Yojson.Safe.from_file config
-      |> Runtime_config.of_yojson |> Result.ok_or_failwith
-    in
-    { target_epoch_ledgers_state_hash
-    ; start_slot_since_genesis = 0L
-    ; genesis_ledger = Option.value_exn runtime_config.ledger
-    ; first_pass_ledger_hashes = []
-    ; last_snarked_ledger_hash = None
-    }
-
-  let to_yojson_file t output = Yojson.Safe.to_file output (to_yojson t)
-
-  let of_ledger_file_exn ledger_file ~target_epoch_ledgers_state_hash =
-    let genesis_ledger =
-      Yojson.Safe.from_file ledger_file
-      |> Runtime_config.Ledger.of_yojson |> Result.ok_or_failwith
-    in
-    { target_epoch_ledgers_state_hash
-    ; start_slot_since_genesis = 0L
-    ; genesis_ledger
-    ; first_pass_ledger_hashes = []
-    ; last_snarked_ledger_hash = None
-    }
-
-  let of_checkpoint_file file target_epoch_ledgers_state_hash =
-    let t = Yojson.Safe.from_file file |> of_yojson |> Result.ok_or_failwith in
-    { target_epoch_ledgers_state_hash
-    ; start_slot_since_genesis = t.start_slot_since_genesis
-    ; genesis_ledger = t.genesis_ledger
-    ; first_pass_ledger_hashes = t.first_pass_ledger_hashes
-    ; last_snarked_ledger_hash = t.last_snarked_ledger_hash
-    }
-end
-
-module BerkeleyTablesAppOutput = struct
-  type t =
-    { target_epoch_ledgers_state_hash : Mina_base.State_hash.t
-    ; target_fork_state_hash : Mina_base.State_hash.t
-    ; target_genesis_ledger : Runtime_config.Ledger.t
-    ; target_epoch_data : Runtime_config.Epoch_data.t
-    }
-  [@@deriving yojson]
-
-  let of_json_file_exn file =
-    Yojson.Safe.from_file file |> of_yojson |> Result.ok_or_failwith
-end
+open Mina_automation
 
 module HardForkSteps = struct
   type t =
     { env : Settings.t
     ; working_dir : string
-    ; docker_api : DokerApiClient.t
+    ; docker_api : Docker.Client.t
     ; test_name : string
     }
 
   let create (env : Settings.t) working_dir test_name =
-    { env; working_dir; docker_api = DokerApiClient.default; test_name }
+    { env; working_dir; docker_api = Docker.Client.default; test_name }
 
-  let unpack_data archive output =
-    Util.run_cmd_exn "." "tar" [ "-xf"; archive; "-C"; output ]
+  let run_context t : Executor.context =
+    match t.env.executor with Dune -> Dune | Bash -> Debian
 
   let unpack_random_data archive output =
-    Unix.mkdir output ; unpack_data archive output
+    Unix.mkdir output ;
+    Utils.untar ~archive ~output
 
-  let create_db t db =
-    Unix.putenv ~key:"PGPASSWORD" ~data:t.env.db.password ;
-    Util.run_cmd_exn "." "psql"
-      [ "-h"
-      ; t.env.db.host
-      ; "-p"
-      ; string_of_int t.env.db.port
-      ; "-U"
-      ; t.env.db.user
-      ; "-c"
-      ; Printf.sprintf "CREATE DATABASE %s;" db
-      ]
-
-  let create_schema t db script =
-    Unix.putenv ~key:"PGPASSWORD" ~data:t.env.db.password ;
-    Util.run_cmd_exn "." "psql"
-      [ "-h"
-      ; t.env.db.host
-      ; "-p"
-      ; string_of_int t.env.db.port
-      ; "-U"
-      ; t.env.db.user
-      ; "-d"
-      ; db
-      ; "-a"
-      ; "-f"
-      ; script
-      ]
+  let to_connection t =
+    Psql.Credentials
+      { Psql.Credentials.user = Some t.env.db.user
+      ; password = t.env.db.password
+      ; host = Some t.env.db.host
+      ; port = Some t.env.db.port
+      ; db = None
+      }
 
   let create_random_output_db t =
-    let db_name =
-      Printf.sprintf "%s_%d" t.test_name (Random.int 1000000 + 1000)
+    let open Deferred.Let_syntax in
+    let%bind db_name =
+      Psql.create_new_random_archive ~connection:(to_connection t)
+        ~prefix:t.test_name ~script:t.env.paths.create_schema_script
     in
-    let%bind _ = create_db t db_name in
-    let%bind _ = create_schema t db_name t.env.paths.create_schema_script in
     Deferred.return (Settings.connection_str_to t.env db_name)
 
   let create_random_mainnet_db t =
-    let db_name =
-      Printf.sprintf "%s_%d" t.test_name (Random.int 1000000 + 1000)
+    let open Deferred.Let_syntax in
+    let%bind db_name =
+      Psql.create_random_mainnet_db ~connection:(to_connection t)
+        ~prefix:t.test_name ~working_dir:t.working_dir
     in
-    let create_schema_script = Filename.concat t.working_dir db_name in
-    let%bind _ = create_db t db_name in
-    let%bind _ =
-      Util.run_cmd_exn "." "wget"
-        [ "-c"
-        ; "https://raw.githubusercontent.com/MinaProtocol/mina/compatible/src/app/archive/create_schema.sql"
-        ; "-O"
-        ; create_schema_script
-        ]
-    in
-    let%bind _ = create_schema t db_name create_schema_script in
     Deferred.return (Settings.connection_str_to t.env db_name)
-
-  let run t ~args app =
-    match t.env.executor with
-    | Dune ->
-        Util.run_cmd_exn "." "dune" ([ "exec"; app; "--" ] @ args)
-    | Bash ->
-        Util.run_cmd_exn "." app args
 
   let perform_berkeley_migration t ~batch_size ~genesis_ledger
       ~source_archive_uri ~source_blocks_bucket ~target_archive_uri
-      ~end_global_slot ~berkeley_migration_app =
-    let maybe_end_global_slot =
-      match end_global_slot with
-      | None ->
-          []
-      | Some end_global_slot ->
-          [ "--end-global-slot"; string_of_int end_global_slot ]
-    in
-
-    let args =
-      [ "--batch-size"
-      ; string_of_int batch_size
-      ; "--config-file"
-      ; genesis_ledger
-      ; "--mainnet-archive-uri"
-      ; source_archive_uri
-      ; "--migrated-archive-uri"
-      ; target_archive_uri
-      ; "--mainnet-blocks-bucket"
-      ; source_blocks_bucket
-      ]
-      @ maybe_end_global_slot
-    in
-    run t ~args berkeley_migration_app
+      ~end_global_slot =
+    Berkeley_migration.of_context (run_context t)
+    |> Berkeley_migration.run ~batch_size ~genesis_ledger ~source_archive_uri
+         ~source_blocks_bucket ~target_archive_uri ~end_global_slot
 
   let run_migration_replayer t ~archive_uri ~input_config ~interval_checkpoint
-      ~replayer_app ~output_ledger =
-    let args =
-      [ "--migration-mode"
-      ; "--archive-uri"
-      ; archive_uri
-      ; "--input-file"
-      ; input_config
-      ; "--checkpoint-interval"
-      ; string_of_int interval_checkpoint
-      ; "--output-file"
-      ; output_ledger
-      ; "--checkpoint-output-folder"
-      ; t.working_dir
-      ; "--checkpoint-file-prefix"
-      ; "migration"
-      ]
-    in
-
-    run t ~args replayer_app
+      ~output_ledger =
+    Replayer.of_context (run_context t)
+    |> Replayer.run ~archive_uri ~input_config ~interval_checkpoint
+         ~output_ledger ~migration_mode:true
+         ~checkpoint_output_folder:t.working_dir
+         ~checkpoint_file_prefix:"migration"
 
   let gather_files_with_prefix root ~substring =
     Sys.readdir root |> Array.to_list
@@ -459,53 +322,43 @@ module HardForkSteps = struct
         Deferred.unit
 
   let import_mainnet_dump t date =
-    let dump_name =
-      Printf.sprintf "mainnet-archive-dump-%s_0000.sql.tar.gz" date
-    in
-    let archive = Filename.concat t.working_dir dump_name in
-    let%bind _ =
-      Util.run_cmd_exn "." "wget"
-        [ "-c"
-        ; Printf.sprintf "https://storage.googleapis.com/mina-archive-dumps/%s"
-            dump_name
-        ; "-O"
-        ; archive
-        ]
+    let%bind archive =
+      Archive_dumps.download_via_public_url ~prefix:"mainnet" ~date
+        ~target:t.working_dir
     in
     let sql =
       Printf.sprintf "%s/mainnet-archive-dump-%s_0000.sql" t.working_dir date
     in
-    let%bind _ = unpack_data archive t.working_dir in
+    let%bind _ = Utils.untar ~archive ~output:t.working_dir in
     let db_name =
       Printf.sprintf "%s_%d" t.test_name (Random.int 1000000 + 1000)
     in
     let%bind _ =
-      Util.run_cmd_exn "." "sed"
-        [ "-i"
-        ; "-e"
-        ; Printf.sprintf "s/archive_balances_migrated/%s/g" db_name
-        ; sql
-        ]
+      Utils.sed ~search:"archive_balances_migrated" ~replacement:db_name
+        ~input:sql
     in
-    let%bind _ = create_db t db_name in
-    let%bind _ = create_schema t db_name sql in
+
+    let%bind _ =
+      Psql.create_new_mina_archive ~connection:(to_connection t) ~db:db_name
+        ~script:sql
+    in
+
     Deferred.return (Settings.connection_str_to t.env db_name)
 
-  let import_genesis_mainnet_dump t =
-    let db_name =
-      Printf.sprintf "%s_input_%d" t.test_name (Random.int 10000 + 1000)
+  let import_dump t ~script =
+    let open Deferred.Let_syntax in
+    let prefix = Printf.sprintf "%s_input" t.test_name in
+    let%bind db_name =
+      Psql.create_new_random_archive ~connection:(to_connection t) ~prefix
+        ~script
     in
-    let%bind _ = create_db t db_name in
-    let%bind _ = create_schema t db_name t.env.paths.mainnet_genesis_block in
     Deferred.return (Settings.connection_str_to t.env db_name)
 
   let import_random_data_dump t =
-    let db_name =
-      Printf.sprintf "%s_input_%d" t.test_name (Random.int 10000 + 1000)
-    in
-    let%bind _ = create_db t db_name in
-    let%bind _ = create_schema t db_name t.env.paths.random_data_dump in
-    Deferred.return (Settings.connection_str_to t.env db_name)
+    import_dump t ~script:t.env.paths.random_data_dump
+
+  let import_genesis_mainnet_dump t =
+    import_dump t ~script:t.env.paths.mainnet_genesis_block
 
   let recreate_working_dir t =
     let open Deferred.Let_syntax in
@@ -517,11 +370,20 @@ module HardForkSteps = struct
       [ "-f"; Printf.sprintf "%s/%s-checkpoint*.json" t.working_dir prefix ]
 
   let compare_replayer_outputs expected actual ~compare_receipt_chain_hashes =
-    let expected_output = BerkeleyTablesAppOutput.of_json_file_exn expected in
-    let actual_output = BerkeleyTablesAppOutput.of_json_file_exn actual in
+    let expected_output = Replayer.Output.of_json_file_exn expected in
+    let actual_output = Replayer.Output.of_json_file_exn actual in
 
-    let get_accounts (output : BerkeleyTablesAppOutput.t) file =
-      match output.target_genesis_ledger.base with
+    let get_accounts (output : Replayer.Output.t) file =
+      let ledger =
+        match output.target_genesis_ledger with
+        | None ->
+            failwithf
+              "replayer output file (%s) does not have any target ledger " file
+              ()
+        | Some ledger ->
+            ledger
+      in
+      match ledger.base with
       | Named _ ->
           failwithf "%s file does not have any account" file ()
       | Accounts accounts ->
@@ -600,7 +462,7 @@ module HardForkSteps = struct
     let expected_ledger_path = Printf.sprintf "%s/%s" folder name in
     let expected_ledger =
       Yojson.Safe.from_file expected_ledger_path
-      |> ReplayerOutput.of_yojson |> Result.ok_or_failwith
+      |> Replayer.Output.of_yojson |> Result.ok_or_failwith
     in
     let end_migration_ledger_hash =
       expected_ledger.target_epoch_ledgers_state_hash
@@ -622,41 +484,49 @@ module HardForkSteps = struct
       List.map blocks ~f:(fun block ->
           Filename.concat workdir (Filename.basename block) )
     in
-    DokerApiClient.run_cmd_in_image t.docker_api ~image:t.env.reference.docker
-      ~cmd:
-        ( [ "mina-archive-blocks"; "--archive-uri"; conn_str; "-precomputed" ]
-        @ blocks_in_docker )
-      ~workdir
-      ~volume:(Printf.sprintf "%s:%s" (Filename.realpath t.working_dir) workdir)
-      ~network:"hardfork"
 
-  let run_compatible_replayer t conn_str ?(clear_checkpoints = false)
-      ~input_file ~output_file =
+    let archive_blocks =
+      Archive_blocks.of_context Docker
+        { image = t.env.reference.docker
+        ; workdir
+        ; volume =
+            Printf.sprintf "%s:%s" (Filename.realpath t.working_dir) workdir
+        ; network = "hardfork"
+        }
+    in
+
+    Archive_blocks.run archive_blocks ~archive_uri ~blocks:blocks_in_docker
+
+  let run_compatible_replayer t ~archive_uri ?(clear_checkpoints = false)
+      ~input_config ~output_ledger =
     let workdir = "/workdir" in
     let host_volume =
       match t.env.reference.volume_bind with
       | Some volume ->
-          Printf.sprintf "%s/%s" volume t.test_name
+          Filename.concat volume t.test_name
       | None ->
           Core.Filename.realpath t.working_dir
     in
-    let%bind _ =
-      DokerApiClient.run_cmd_in_image t.docker_api ~image:t.env.reference.docker
-        ~workdir
-        ~cmd:
-          [ "mina-replayer"
-          ; "--archive-uri"
-          ; conn_str
-          ; "--input-file"
-          ; Printf.sprintf "%s/%s" workdir input_file
-          ; "--output-file"
-          ; Printf.sprintf "%s/%s" workdir output_file
-          ; "--checkpoint-interval"
-          ; "10"
-          ]
-        ~volume:(Printf.sprintf "%s:%s" host_volume workdir)
-        ~network:"hardfork"
+
+    let replayer_app =
+      Replayer.of_context
+        (Docker
+           { image = t.env.reference.docker
+           ; workdir
+           ; volume = Printf.sprintf "%s:%s" host_volume workdir
+           ; network = "hardfork"
+           } )
     in
+
+    let%bind _ =
+      Replayer.run replayer_app ~archive_uri
+        ~input_config:(Filename.concat workdir input_config)
+        ~interval_checkpoint:10
+        ~output_ledger:(Filename.concat workdir output_ledger)
+        ?checkpoint_output_folder:None ?checkpoint_file_prefix:None
+        ~migration_mode:false
+    in
+
     if clear_checkpoints then clear_checkpoint_files "replayer" t >>| ignore
     else Deferred.unit
 

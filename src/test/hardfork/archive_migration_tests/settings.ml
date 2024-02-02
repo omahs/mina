@@ -2,9 +2,7 @@ open Core
 
 module Settings = struct
   type paths =
-    { berkeley_migration : string
-    ; replayer : string
-    ; mainnet_genesis_ledger : string
+    { mainnet_genesis_ledger : string
     ; mainnet_genesis_block : string
     ; mainnet_data_bucket : string [@default "mina_network_block_data"]
     ; create_schema_script : string

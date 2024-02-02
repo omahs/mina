@@ -2087,7 +2087,7 @@ module User_command = struct
     | Zkapp_command _ ->
         `Zkapp_command
 
-  let add_if_doesn't_exist conn (t : User_command.t) ~v1_transaction_hash =
+  let add_if_doesn't_exist conn (t : User_command.t) ~v1_transaction_hash ~logger =
     match t with
     | Signed_command sc ->
         Signed_command.add_if_doesn't_exist conn ~via:(via t) sc
@@ -3056,7 +3056,7 @@ module Block = struct
                 let%bind id =
                   User_command.add_if_doesn't_exist
                     (module Conn)
-                    user_command.data ~v1_transaction_hash
+                    user_command.data ~v1_transaction_hash ~logger
                 in
                 let%map () =
                   match command with

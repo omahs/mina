@@ -2,6 +2,7 @@ open Async
 open Settings
 open Steps
 open Core
+open Mina_automation
 
 module HardForkTests = struct
   let mainnet_migration env_file =
@@ -33,15 +34,16 @@ module HardForkTests = struct
         in
 
         let input =
-          BerkeleyTablesAppInput.of_runtime_config_file_exn
+          Replayer.InputConfig.of_runtime_config_file_exn
             env.paths.mainnet_genesis_ledger (Some migration_end_state_hash)
         in
-        BerkeleyTablesAppInput.to_yojson_file input reference_replayer_input ;
+        Replayer.InputConfig.to_yojson_file input reference_replayer_input ;
 
         let%bind _ =
-          HardForkSteps.run_compatible_replayer steps conn_str_source_db
-            ~input_file:(Filename.basename reference_replayer_input)
-            ~output_file:(Filename.basename reference_replayer_output)
+          HardForkSteps.run_compatible_replayer steps
+            ~archive_uri:conn_str_source_db
+            ~input_config:(Filename.basename reference_replayer_input)
+            ~output_ledger:(Filename.basename reference_replayer_output)
             ~clear_checkpoints:true
         in
 
@@ -55,14 +57,12 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.mainnet_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some migration_end_slot)
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db
             ~input_config:reference_replayer_input ~interval_checkpoint:10
-            ~replayer_app:env.paths.replayer
             ~output_ledger:actual_replayer_output
         in
 
@@ -89,6 +89,7 @@ module HardForkTests = struct
     in
     Async.Thread_safe.block_on_async_exn (fun () ->
         let steps = HardForkSteps.create env temp_dir test_name in
+
         let open Deferred.Let_syntax in
         let%bind _ = HardForkSteps.recreate_working_dir steps in
 
@@ -105,15 +106,16 @@ module HardForkTests = struct
         in
 
         let input =
-          BerkeleyTablesAppInput.of_runtime_config_file_exn
+          Replayer.InputConfig.of_runtime_config_file_exn
             env.paths.random_data_ledger (Some migration_end_state_hash)
         in
-        BerkeleyTablesAppInput.to_yojson_file input reference_replayer_input ;
+        Replayer.InputConfig.to_yojson_file input reference_replayer_input ;
 
         let%bind _ =
-          HardForkSteps.run_compatible_replayer steps conn_str_source_db
-            ~input_file:(Filename.basename reference_replayer_input)
-            ~output_file:(Filename.basename reference_replayer_output)
+          HardForkSteps.run_compatible_replayer steps
+            ~archive_uri:conn_str_source_db
+            ~input_config:(Filename.basename reference_replayer_input)
+            ~output_ledger:(Filename.basename reference_replayer_output)
             ~clear_checkpoints:true
         in
         let%bind conn_str_target_db =
@@ -130,14 +132,12 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.random_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some migration_end_slot)
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db
             ~input_config:reference_replayer_input ~interval_checkpoint:10
-            ~replayer_app:env.paths.replayer
             ~output_ledger:actual_replayer_output
         in
 
@@ -182,15 +182,16 @@ module HardForkTests = struct
             migration_end_slot
         in
         let input =
-          BerkeleyTablesAppInput.of_runtime_config_file_exn
+          Replayer.InputConfig.of_runtime_config_file_exn
             env.paths.mainnet_genesis_ledger (Some migration_end_state_hash)
         in
-        BerkeleyTablesAppInput.to_yojson_file input reference_replayer_input ;
+        Replayer.InputConfig.to_yojson_file input reference_replayer_input ;
 
         let%bind _ =
-          HardForkSteps.run_compatible_replayer steps conn_str_source_db
-            ~input_file:(Filename.basename reference_replayer_input)
-            ~output_file:(Filename.basename reference_replayer_output)
+          HardForkSteps.run_compatible_replayer steps
+            ~archive_uri:conn_str_source_db
+            ~input_config:(Filename.basename reference_replayer_input)
+            ~output_ledger:(Filename.basename reference_replayer_output)
             ~clear_checkpoints:true
         in
 
@@ -206,20 +207,18 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.mainnet_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some (migration_end_slot / 2))
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let input =
-          BerkeleyTablesAppInput.of_runtime_config_file_exn
+          Replayer.InputConfig.of_runtime_config_file_exn
             env.paths.mainnet_genesis_ledger None
         in
-        BerkeleyTablesAppInput.to_yojson_file input actual_replayer_input ;
+        Replayer.InputConfig.to_yojson_file input actual_replayer_input ;
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db ~input_config:actual_replayer_input
-            ~interval_checkpoint:10 ~replayer_app:env.paths.replayer
-            ~output_ledger:"temp_ledger.json"
+            ~interval_checkpoint:10 ~output_ledger:"temp_ledger.json"
         in
 
         let checkpoints =
@@ -234,21 +233,19 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.mainnet_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some migration_end_slot)
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let actual_input =
-          BerkeleyTablesAppInput.of_checkpoint_file
+          Replayer.InputConfig.of_checkpoint_file
             (List.last_exn checkpoints)
             (Some migration_end_state_hash)
         in
-        BerkeleyTablesAppInput.to_yojson_file actual_input actual_replayer_input ;
+        Replayer.InputConfig.to_yojson_file actual_input actual_replayer_input ;
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db ~input_config:actual_replayer_input
-            ~interval_checkpoint:10 ~replayer_app:env.paths.replayer
-            ~output_ledger:actual_replayer_output
+            ~interval_checkpoint:10 ~output_ledger:actual_replayer_output
         in
 
         let%bind _ =
@@ -300,15 +297,16 @@ module HardForkTests = struct
         in
 
         let input =
-          BerkeleyTablesAppInput.of_runtime_config_file_exn
+          Replayer.InputConfig.of_runtime_config_file_exn
             env.paths.mainnet_genesis_ledger hash
         in
-        BerkeleyTablesAppInput.to_yojson_file input reference_replayer_input ;
+        Replayer.InputConfig.to_yojson_file input reference_replayer_input ;
 
         let%bind _ =
-          HardForkSteps.run_compatible_replayer steps conn_str_mainnet_source_db
-            ~input_file:(Filename.basename reference_replayer_input)
-            ~output_file:(Filename.basename reference_replayer_output)
+          HardForkSteps.run_compatible_replayer steps
+            ~archive_uri:conn_str_mainnet_source_db
+            ~input_config:(Filename.basename reference_replayer_input)
+            ~output_ledger:(Filename.basename reference_replayer_output)
             ~clear_checkpoints:true
         in
 
@@ -319,14 +317,12 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.mainnet_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some migration_end_slot)
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db
             ~input_config:reference_replayer_input ~interval_checkpoint:1
-            ~replayer_app:env.paths.replayer
             ~output_ledger:actual_replayer_output
         in
 
@@ -358,9 +354,10 @@ module HardForkTests = struct
         in
 
         let%bind _ =
-          HardForkSteps.run_compatible_replayer steps conn_str_mainnet_source_db
-            ~input_file:(Filename.basename reference_replayer_input)
-            ~output_file:(Filename.basename reference_replayer_output)
+          HardForkSteps.run_compatible_replayer steps
+            ~archive_uri:conn_str_mainnet_source_db
+            ~input_config:(Filename.basename reference_replayer_input)
+            ~output_ledger:(Filename.basename reference_replayer_output)
             ~clear_checkpoints:true
         in
 
@@ -371,14 +368,12 @@ module HardForkTests = struct
             ~source_blocks_bucket:env.paths.mainnet_data_bucket
             ~target_archive_uri:conn_str_target_db
             ~end_global_slot:(Some migration_end_slot)
-            ~berkeley_migration_app:env.paths.berkeley_migration
         in
 
         let%bind _ =
           HardForkSteps.run_migration_replayer steps
             ~archive_uri:conn_str_target_db
             ~input_config:reference_replayer_input ~interval_checkpoint:1
-            ~replayer_app:env.paths.replayer
             ~output_ledger:actual_replayer_output
         in
 
