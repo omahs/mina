@@ -27,8 +27,8 @@ FORK_RUNTIME_GENESIS_LEDGER_EXE="$3"
 
 MAIN_NETWORK_PID=$!
 
-# Sleep until slot_tx_end plus minus 5 slots
-sleep $((MAIN_SLOT*(SLOT_TX_END-5)+MAIN_DELAY*60))s
+# Sleep until slot_tx_end minus 5 slots plus one minute (to account for rounding)
+sleep $((MAIN_SLOT*(SLOT_TX_END-5)+MAIN_DELAY*60+60))s
 
 # 2. Check that there are many blocks >50% of slots occupied from slot 0 to slot $((SLOT_TX_END / 2)) and that there are some user commands in blocks corresponding to slots
 blockHeight=$(get_height 10303)
@@ -108,7 +108,7 @@ wait "$MAIN_NETWORK_PID"
 
 # 9. Check that network eventually creates some blocks
 
-sleep $((FORK_SLOT*60+FORK_DELAY*60+60))s
+sleep $((FORK_SLOT*10+FORK_DELAY*60+60))s
 height1=$(get_height 10303)
 if [[ $height1 == 0 ]]; then
   echo "Assertion failed: block height $height1 should be greater than 0." >&2
