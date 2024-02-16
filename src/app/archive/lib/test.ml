@@ -137,10 +137,12 @@ let%test_module "Archive node unit tests" =
           match%map
             let open Deferred.Result.Let_syntax in
             let%bind user_command_id =
-              Processor.User_command.add_if_doesn't_exist conn user_command
+              Processor.User_command.add_if_doesn't_exist conn ~logger
+                ~v1_transaction_hash:false user_command
             in
             let%map result =
               Processor.User_command.find conn ~transaction_hash
+                ~v1_transaction_hash:false
               >>| function
               | Some (`Signed_command_id signed_command_id) ->
                   Some signed_command_id
@@ -189,10 +191,12 @@ let%test_module "Archive node unit tests" =
               match%map
                 let open Deferred.Result.Let_syntax in
                 let%bind user_command_id =
-                  Processor.User_command.add_if_doesn't_exist conn user_command
+                  Processor.User_command.add_if_doesn't_exist conn ~logger
+                    ~v1_transaction_hash:false user_command
                 in
                 let%map result =
                   Processor.User_command.find conn ~transaction_hash
+                    ~v1_transaction_hash:false
                   >>| function
                   | Some (`Zkapp_command_id zkapp_command_id) ->
                       Some zkapp_command_id
