@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-SLOT_TX_END="${SLOT_TX_END:-15}"
-SLOT_CHAIN_END="${SLOT_CHAIN_END:-30}"
+SLOT_TX_END="${SLOT_TX_END:-10}"
+SLOT_CHAIN_END="${SLOT_CHAIN_END:-$((SLOT_TX_END+8))}"
 
 # Slot duration in seconds to be used for both version
 MAIN_SLOT="${MAIN_SLOT:-90}"
@@ -27,16 +27,16 @@ FORK_RUNTIME_GENESIS_LEDGER_EXE="$3"
 
 MAIN_NETWORK_PID=$!
 
-# Sleep until slot_tx_end plus one minute
-sleep $((MAIN_SLOT*(SLOT_TX_END-10)+MAIN_DELAY*60+60))s
+# Sleep until slot_tx_end plus minus 5 slots
+sleep $((MAIN_SLOT*(SLOT_TX_END-5)+MAIN_DELAY*60))s
 
 # 2. Check that there are many blocks >50% of slots occupied from slot 0 to slot $((SLOT_TX_END / 2)) and that there are some user commands in blocks corresponding to slots
 blockHeight=$(get_height 10303)
-echo "Block height is $blockHeight at slot $((SLOT_TX_END / 2))."
+echo "Block height is $blockHeight at slot $((SLOT_TX_END-5))."
 echo "Blocks are produced."
 
 all_blocks_empty=true
-for i in {1..10}
+for i in {1..5}
 do
   sleep "${MAIN_SLOT}s"
   usercmds=$(blocks_withUserCommands 10303)
@@ -50,10 +50,10 @@ if $all_blocks_empty; then
 fi
 
 # 3. Check that transactions stop getting included from slot SLOT_TX_END to slot SLOT_CHAIN_END, i.e. there are some blocks, with no user commands, coinbase set to 0.
-sleep $((MAIN_SLOT*(SLOT_CHAIN_END-SLOT_TX_END-10)))s
+sleep $((MAIN_SLOT*(SLOT_CHAIN_END-SLOT_TX_END-5)))s
 
 all_blocks_empty=false
-for i in {1..10}
+for i in {1..5}
 do
   sleep "${MAIN_SLOT}s"
   usercmds=$(blocks_withUserCommands 10303)
@@ -111,7 +111,7 @@ wait "$MAIN_NETWORK_PID"
 sleep $((FORK_SLOT*60+FORK_DELAY*60+60))s
 height1=$(get_height 10303)
 if [[ $height1 == 0 ]]; then
-  echo "My assertion failed: block height $height1 should be greater than 0." >&2
+  echo "Assertion failed: block height $height1 should be greater than 0." >&2
   exit 3
 fi
 echo "Blocks are produced."

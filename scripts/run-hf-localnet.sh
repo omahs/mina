@@ -126,7 +126,7 @@ jq "$update_config_expr" > $CONF_DIR/base.json << EOF
 {
   "genesis": {
     "slots_per_epoch": 48,
-    "k": 2,
+    "k": 10,
     "grace_period_slots": 3
   },
   "proof": {
