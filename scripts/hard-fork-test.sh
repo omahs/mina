@@ -115,6 +115,7 @@ if [[ $height1 == 0 ]]; then
   exit 3
 fi
 echo "Blocks are produced."
+
 # Wait and check that there are blocks created with >50% occupancy and there are transactions in last 10 blocks
 
 all_blocks_empty=true
