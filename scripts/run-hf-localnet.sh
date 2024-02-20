@@ -200,10 +200,10 @@ while ! "$MINA_EXE" ledger export staged-ledger --daemon-port 10311 > localnet/e
 done
 
 i=0
-while kill -0 $sw_pid; do
+while kill -0 $sw_pid 2>/dev/null; do
   <localnet/exported_staged_ledger.json jq -r '.[].pk' | shuf | while read acc; do
-    if ! kill -0 $sw_pid; then
-      exit 0
+    if ! kill -0 $sw_pid 2>dev/null; then
+      break
     fi
     "$MINA_EXE" client send-payment --sender "$(cat $CONF_DIR/bp.pub)" --receiver "$acc" \
       --amount 0.1 --memo "payment_$i" --rest-server 10313 2>/dev/null \

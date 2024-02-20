@@ -21,6 +21,11 @@ MAIN_MINA_EXE="$1"
 FORK_MINA_EXE="$2"
 FORK_RUNTIME_GENESIS_LEDGER_EXE="$3"
 
+stop_nodes(){
+  "$1" client stop-daemon --daemon-port 10301
+  "$1" client stop-daemon --daemon-port 10311
+}
+
 # 1. Node is started
 ./scripts/run-hf-localnet.sh -m "$MAIN_MINA_EXE" -d "$MAIN_DELAY" -i "$MAIN_SLOT" \
   -s "$MAIN_SLOT" --slot-tx-end "$SLOT_TX_END" --slot-chain-end "$SLOT_CHAIN_END" &
@@ -46,6 +51,7 @@ do
 done
 if $all_blocks_empty; then
   echo "Assertion failed: all blocks are empty" >&2
+  stop_nodes "$MAIN_MINA_EXE"
   exit 3
 fi
 
@@ -64,6 +70,7 @@ do
 done
 if [[ ! $all_blocks_empty ]]; then
   echo "Assertion failed: not all blocks are empty" >&2
+  stop_nodes "$MAIN_MINA_EXE"
   exit 3
 fi
 
@@ -74,6 +81,7 @@ sleep 5m
 height2=$(get_height 10303)
 if [[ $(( height2 - height1 )) -gt 0 ]]; then
   echo "Assertion failed: there should be no change in blockheight." >&2
+  stop_nodes "$MAIN_MINA_EXE"
   exit 3
 fi
 
@@ -87,8 +95,7 @@ while [[ "$(head -c 4 localnet/fork_config.json)" == "null" ]]; do
 done
 
 # 7. Runtime config is converted with a script to have only ledger hashes in the config
-"$MAIN_MINA_EXE" client stop-daemon --daemon-port 10301
-"$MAIN_MINA_EXE" client stop-daemon --daemon-port 10311
+stop_nodes "$MAIN_MINA_EXE"
 
 sed -i -e 's/"set_verification_key": "signature"/"set_verification_key": {"auth": "signature", "txn_version": "1"}/' localnet/fork_config.json
 
@@ -112,6 +119,7 @@ sleep $((FORK_SLOT*10+FORK_DELAY*60+60))s
 height1=$(get_height 10303)
 if [[ $height1 == 0 ]]; then
   echo "Assertion failed: block height $height1 should be greater than 0." >&2
+  stop_nodes "$FORK_MINA_EXE"
   exit 3
 fi
 echo "Blocks are produced."
@@ -129,8 +137,8 @@ do
 done
 if $all_blocks_empty; then
   echo "Assertion failed: all blocks are empty" >&2
+  stop_nodes "$FORK_MINA_EXE"
   exit 3
 fi
 
-"$FORK_MINA_EXE" client stop-daemon --daemon-port 10301
-"$FORK_MINA_EXE" client stop-daemon --daemon-port 10311
+stop_nodes "$FORK_MINA_EXE"
