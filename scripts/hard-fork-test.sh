@@ -137,11 +137,22 @@ wait "$MAIN_NETWORK_PID"
 ./scripts/run-hf-localnet.sh -m "$FORK_MINA_EXE" -d "$FORK_DELAY" -i "$FORK_SLOT" \
   -s "$FORK_SLOT" -c localnet/config.json --genesis-ledger-dir localnet/hf_ledgers &
 
-# TODO consider checking block height right after start to be +1 of $latest_height
+sleep $((FORK_DELAY*60))s
+
+earliest_height=""
+while [[ "$earliest_height" == "" ]] || [[ "$earliest_height" == "null" ]]; do
+  earliest_height=$(get_height_of_earliest 10303 2>/dev/null)
+  sleep "$FORK_SLOT"s
+done
+if [[ $earliest_height != $((expected_genesis_slot+1)) ]]; then
+  echo "Assertion failed: unexpected block height $earliest_height at the beginning of the fork" >&2
+  stop_nodes "$FORK_MINA_EXE"
+  exit 3
+fi
 
 # 9. Check that network eventually creates some blocks
 
-sleep $((FORK_SLOT*10+FORK_DELAY*60+60))s
+sleep $((FORK_SLOT*10))s
 height1=$(get_height 10303)
 if [[ $height1 == 0 ]]; then
   echo "Assertion failed: block height $height1 should be greater than 0." >&2
