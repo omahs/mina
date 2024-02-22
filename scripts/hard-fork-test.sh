@@ -52,14 +52,14 @@ if [[ $((2*blockHeight)) -lt $BEST_CHAIN_QUERY_FROM ]]; then
   exit 3
 fi
 
-last_ne_str="$(for i in $(seq $BEST_CHAIN_QUERY_FROM $SLOT_CHAIN_END); do
+tx_end_data_str="$(for i in $(seq $BEST_CHAIN_QUERY_FROM $SLOT_CHAIN_END); do
   blocks $((10303+10*(i%2))) 2>/dev/null || true
   sleep "${MAIN_SLOT}s"
-done | latest_nonempty_block)"
+done | find_tx_end_slot)"
 
-IFS=, read -ra latest_ne <<< "$last_ne_str"
+IFS=, read -ra tx_end_data <<< "$tx_end_data_str"
 
-max_slot=${latest_ne[0]}
+max_slot=${tx_end_data[0]}
 echo "Last occupied slot of pre-fork chain: $max_slot"
 if [[ $max_slot -ge $SLOT_CHAIN_END ]]; then
   echo "Assertion failed: block with slot $max_slot created after slot chain end" >&2
@@ -67,18 +67,35 @@ if [[ $max_slot -ge $SLOT_CHAIN_END ]]; then
   exit 3
 fi
 
-latest_shash="${latest_ne[1]}"
-latest_height=${latest_ne[2]}
-latest_slot=${latest_ne[3]}
+latest_ne_shash="${tx_end_data[1]}"
+latest_ne_height=${tx_end_data[2]}
+latest_ne_slot=${tx_end_data[3]}
 
-echo "Latest non-empty block: $latest_shash, height: $latest_height, slot: $latest_slot"
-if [[ $latest_slot -ge $SLOT_TX_END ]]; then
-  echo "Assertion failed: non-empty block with slot $latest_slot created after slot tx end" >&2
+first_e_shash="${tx_end_data[4]}"
+first_e_height=${tx_end_data[5]}
+first_e_slot=${tx_end_data[6]}
+
+echo "Latest non-empty block: $latest_ne_shash, height: $latest_ne_height, slot: $latest_ne_slot"
+echo "First empty block: $first_e_shash, height: $first_e_height, slot: $first_e_slot"
+
+if [[ $((latest_ne_height + 1)) != $first_e_height ]]; then
+  echo "Assertion failed: first empty block should immediately follow the last non-empty block" >&2
   stop_nodes "$MAIN_MINA_EXE"
   exit 3
 fi
 
-expected_fork_data="{\"blockchain_length\":$latest_height,\"global_slot_since_genesis\":$latest_slot,\"state_hash\":\"$latest_shash\"}"
+if [[ $latest_ne_slot -ge $SLOT_TX_END ]] || [[ $first_e_slot -lt $SLOT_TX_END ]]; then
+  echo "Assertion failed: relation $latest_ne_slot < slot tx end ($SLOT_TX_END) <= $first_e_slot doesn't hold" >&2
+  stop_nodes "$MAIN_MINA_EXE"
+  exit 3
+fi
+
+# TODO consider fixing fork_config export and simplifying the condition below
+if [[ $first_e_slot == $SLOT_TX_END ]]; then
+  expected_fork_data="{\"blockchain_length\":$first_e_height,\"global_slot_since_genesis\":$first_e_slot,\"state_hash\":\"$first_e_shash\"}"
+else
+  expected_fork_data="{\"blockchain_length\":$latest_ne_height,\"global_slot_since_genesis\":$latest_ne_slot,\"state_hash\":\"$latest_ne_shash\"}"
+fi
 
 # 4. Check that no new blocks are created
 sleep 1m
@@ -122,7 +139,14 @@ export GENESIS_TIMESTAMP="$( date -u -d @$FORK_GENESIS_UNIX_TS '+%F %H:%M:%S+00:
 FORKING_FROM_CONFIG_JSON=localnet/config/base.json SECONDS_PER_SLOT="$MAIN_SLOT" FORK_CONFIG_JSON=localnet/fork_config.json LEDGER_HASHES_JSON=localnet/hf_ledger_hashes.json scripts/hardfork/create_runtime_config.sh > localnet/config.json
 
 expected_genesis_slot=$(((FORK_GENESIS_UNIX_TS-MAIN_GENESIS_UNIX_TS)/MAIN_SLOT))
-expected_modified_fork_data="{\"blockchain_length\":$latest_height,\"global_slot_since_genesis\":$expected_genesis_slot,\"state_hash\":\"$latest_shash\"}"
+
+# TODO consider fixing fork_config export and simplifying the condition below
+if [[ $first_e_slot == $SLOT_TX_END ]]; then
+  expected_modified_fork_data="{\"blockchain_length\":$first_e_height,\"global_slot_since_genesis\":$expected_genesis_slot,\"state_hash\":\"$first_e_shash\"}"
+else
+  expected_modified_fork_data="{\"blockchain_length\":$latest_ne_height,\"global_slot_since_genesis\":$expected_genesis_slot,\"state_hash\":\"$latest_ne_shash\"}"
+fi
+
 modified_fork_data="$(jq -cS '.proof.fork' localnet/config.json)"
 if [[ "$modified_fork_data" != "$expected_modified_fork_data" ]]; then
   echo "Assertion failed: unexpected modified fork data" >&2

@@ -51,12 +51,23 @@ blocks()
 
 # Reads stream of blocks (ouput of blocks() command) and
 # calculates maximum seen slot, along with hash/height/slot of
-# a non-empty block with largest slot
-latest_nonempty_block(){
+# a non-empty block with largest slot and an empty block
+# with the smallest slot
+#
+# In a regular run, first empty block will be a successor of
+# the last non-empty block and the following relation would hold:
+#   last_ne_slot < slot_tx_end <= first_e_slot
+find_tx_end_slot(){
   # data of a non-empty block with the largest slot
-  latest_shash=""
-  latest_height=0
-  latest_slot=0
+  last_ne_shash=""
+  last_ne_height=0
+  last_ne_slot=0
+
+  # data of an empty block with the smallest slot
+  first_e_shash=""
+  first_e_height=0
+  first_e_slot=1000000
+  # ^ number so high that we don't expect such slot in a test run
 
   max_slot=0
 
@@ -68,12 +79,17 @@ latest_nonempty_block(){
     if [[ $max_slot -lt $slot ]]; then
       max_slot=$slot
     fi
-    if $non_empty && [[ $latest_slot -lt $slot ]]; then
-      latest_shash="${f[0]}"
-      latest_height=${f[1]}
-      latest_slot=$slot
+    if $non_empty && [[ $last_ne_slot -lt $slot ]]; then
+      last_ne_shash="${f[0]}"
+      last_ne_height=${f[1]}
+      last_ne_slot=$slot
+    fi
+    if ! $non_empty && [[ $first_e_slot -gt $slot ]]; then
+      first_e_shash="${f[0]}"
+      first_e_height=${f[1]}
+      first_e_slot=$slot
     fi
   done
 
-  echo "$max_slot,$latest_shash,$latest_height,$latest_slot"
+  echo "$max_slot,$last_ne_shash,$last_ne_height,$last_ne_slot,$first_e_shash,$first_e_height,$first_e_slot"
 }
