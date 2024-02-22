@@ -52,10 +52,10 @@ blocks()
 # Reads stream of blocks (ouput of blocks() command) and
 # calculates maximum seen slot, along with hash/height/slot of
 # a non-empty block with largest slot and an empty block
-# with the smallest slot
+# with the smallest slot coming after the non-empty block
 #
-# In a regular run, first empty block will be a successor of
-# the last non-empty block and the following relation would hold:
+# In a regular run, first empty block will be an immediate successor
+# of the last non-empty block and the following relation would hold:
 #   last_ne_slot < slot_tx_end <= first_e_slot
 find_tx_end_slot(){
   # data of a non-empty block with the largest slot
@@ -83,8 +83,13 @@ find_tx_end_slot(){
       last_ne_shash="${f[0]}"
       last_ne_height=${f[1]}
       last_ne_slot=$slot
+      if [[ $first_e_slot -lt $last_ne_slot ]]; then
+        first_e_shash=""
+        first_e_height=0
+        first_e_slot=1000000
+      fi
     fi
-    if ! $non_empty && [[ $first_e_slot -gt $slot ]]; then
+    if ! $non_empty && [[ $first_e_slot -gt $slot ]] && [[ $slot -ge $last_ne_slot ]]; then
       first_e_shash="${f[0]}"
       first_e_height=${f[1]}
       first_e_slot=$slot
