@@ -143,8 +143,10 @@ expected_genesis_slot=$(((FORK_GENESIS_UNIX_TS-MAIN_GENESIS_UNIX_TS)/MAIN_SLOT))
 # TODO consider fixing fork_config export and simplifying the condition below
 if [[ $first_e_slot == $SLOT_TX_END ]]; then
   expected_modified_fork_data="{\"blockchain_length\":$first_e_height,\"global_slot_since_genesis\":$expected_genesis_slot,\"state_hash\":\"$first_e_shash\"}"
+  genesis_height=$first_e_height
 else
   expected_modified_fork_data="{\"blockchain_length\":$latest_ne_height,\"global_slot_since_genesis\":$expected_genesis_slot,\"state_hash\":\"$latest_ne_shash\"}"
+  genesis_height=$latest_ne_height
 fi
 
 modified_fork_data="$(jq -cS '.proof.fork' localnet/config.json)"
@@ -163,13 +165,21 @@ wait "$MAIN_NETWORK_PID"
 
 sleep $((FORK_DELAY*60))s
 
-earliest_height=""
-while [[ "$earliest_height" == "" ]] || [[ "$earliest_height" == "null" ]]; do
-  earliest_height=$(get_height_of_earliest 10303 2>/dev/null)
+earliest_str=""
+while [[ "$earliest_str" == "" ]] || [[ "$earliest_str" == "," ]]; do
+  earliest_str=$(get_height_and_slot_of_earliest 10303 2>/dev/null)
   sleep "$FORK_SLOT"s
 done
-if [[ $earliest_height != $((expected_genesis_slot+1)) ]]; then
+IFS=, read -ra earliest <<< "$earliest_str"
+earliest_height=${earliest[0]}
+earliest_slot=${earliest[1]}
+if [[ $earliest_height != $((genesis_height+1)) ]]; then
   echo "Assertion failed: unexpected block height $earliest_height at the beginning of the fork" >&2
+  stop_nodes "$FORK_MINA_EXE"
+  exit 3
+fi
+if [[ $earliest_slot != $((expected_genesis_slot+1)) ]]; then
+  echo "Assertion failed: unexpected slot $earliest_slot at the beginning of the fork" >&2
   stop_nodes "$FORK_MINA_EXE"
   exit 3
 fi

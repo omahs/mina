@@ -4,9 +4,9 @@ graphql()
 --data "{\"query\":\"query Q {$2}\"}"
 }
 
-get_height_of_earliest()
-{ graphql "$1" 'bestChain { protocolState { consensusState { blockHeight } } }' \
-| jq -r '.data.bestChain[0].protocolState.consensusState.blockHeight'
+get_height_and_slot_of_earliest()
+{ graphql "$1" 'bestChain { protocolState { consensusState { blockHeight slotSinceGenesis } } }' \
+| jq -r '.data.bestChain[0].protocolState.consensusState | .blockHeight + "," + .slotSinceGenesis'
 }
 
 get_height()
