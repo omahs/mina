@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SLOT_TX_END="${SLOT_TX_END:-10}"
+SLOT_TX_END="${SLOT_TX_END:-30}"
 SLOT_CHAIN_END="${SLOT_CHAIN_END:-$((SLOT_TX_END+8))}"
 
 # Slot from which to start calling bestchain query
@@ -12,7 +12,7 @@ MAIN_SLOT="${MAIN_SLOT:-90}"
 FORK_SLOT="${FORK_SLOT:-30}"
 
 # Delay before genesis slot in minutes to be used for both version
-MAIN_DELAY="${MAIN_DELAY:-10}"
+MAIN_DELAY="${MAIN_DELAY:-20}"
 FORK_DELAY="${FORK_DELAY:-10}"
 
 # script should be run from mina root directory.
