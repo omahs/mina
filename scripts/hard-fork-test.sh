@@ -61,7 +61,7 @@ IFS=, read -ra latest_ne <<< "$last_ne_str"
 
 max_slot=${latest_ne[0]}
 echo "Last occupied slot of pre-fork chain: $max_slot"
-if [[ $max_slot -gt $SLOT_CHAIN_END ]]; then
+if [[ $max_slot -ge $SLOT_CHAIN_END ]]; then
   echo "Assertion failed: block with slot $max_slot created after slot chain end" >&2
   stop_nodes "$MAIN_MINA_EXE"
   exit 3
@@ -72,7 +72,7 @@ latest_height=${latest_ne[2]}
 latest_slot=${latest_ne[3]}
 
 echo "Latest non-empty block: $latest_shash, height: $latest_height, slot: $latest_slot"
-if [[ $latest_slot -gt $SLOT_TX_END ]]; then
+if [[ $latest_slot -ge $SLOT_TX_END ]]; then
   echo "Assertion failed: non-empty block with slot $latest_slot created after slot tx end" >&2
   stop_nodes "$MAIN_MINA_EXE"
   exit 3
