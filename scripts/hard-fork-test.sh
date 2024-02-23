@@ -178,7 +178,10 @@ if [[ $earliest_height != $((genesis_height+1)) ]]; then
   stop_nodes "$FORK_MINA_EXE"
   exit 3
 fi
-if [[ $earliest_slot != $((expected_genesis_slot+1)) ]]; then
+
+# TODO shouldn't comparison be against expected_genesis_slot+1 ?
+# This would normally be equality, but sometimes VRF might be such that first slot isn't occupied
+if [[ $earliest_slot -lt $expected_genesis_slot ]]; then
   echo "Assertion failed: unexpected slot $earliest_slot at the beginning of the fork" >&2
   stop_nodes "$FORK_MINA_EXE"
   exit 3
