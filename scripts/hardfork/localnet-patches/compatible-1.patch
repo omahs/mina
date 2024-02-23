@@ -1,0 +1,33 @@
+From d06e703722374b0506d02267fec1ec83099028e4 Mon Sep 17 00:00:00 2001
+From: georgeee <george.agapov@gmail.com>
+Date: Fri, 26 Jan 2024 07:40:10 +0100
+Subject: [PATCH 1/2] Fix Ivar.fill bug in Transition_frontier_controller
+
+---
+ .../transition_frontier_controller.ml                        | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/lib/transition_frontier_controller/transition_frontier_controller.ml b/src/lib/transition_frontier_controller/transition_frontier_controller.ml
+index 66f548df44..2515969ddc 100644
+--- a/src/lib/transition_frontier_controller/transition_frontier_controller.ml
++++ b/src/lib/transition_frontier_controller/transition_frontier_controller.ml
+@@ -116,7 +116,7 @@ let run ~logger ~trust_system ~verifier ~network ~time_controller
+   Ledger_catchup.run ~logger ~precomputed_values ~trust_system ~verifier
+     ~network ~frontier ~catchup_job_reader ~catchup_breadcrumbs_writer
+     ~unprocessed_transition_cache ;
+-  Strict_pipe.Reader.iter_without_pushback clear_reader ~f:(fun _ ->
++  upon (Strict_pipe.Reader.read clear_reader) (fun _ ->
+       let open Strict_pipe.Writer in
+       kill valid_transition_writer ;
+       kill primary_transition_writer ;
+@@ -125,6 +125,5 @@ let run ~logger ~trust_system ~verifier ~network ~time_controller
+       kill catchup_breadcrumbs_writer ;
+       if Ivar.is_full clean_up_catchup_scheduler then
+         [%log error] "Ivar.fill bug is here!" ;
+-      Ivar.fill clean_up_catchup_scheduler () )
+-  |> don't_wait_for ;
++      Ivar.fill clean_up_catchup_scheduler () ) ;
+   processed_transition_reader
+-- 
+2.18.1
+
