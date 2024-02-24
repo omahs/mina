@@ -68,4 +68,8 @@ if [[ ! -L fork-devnet ]]; then
   git apply -R "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
 fi
 
-"$SCRIPT_DIR"/test.sh compatible-devnet/bin/mina fork-devnet/bin/{mina,runtime_genesis_ledger}
+export SLOT_TX_END=$((RANDOM%120+30))
+
+echo "Running HF test with SLOT_TX_END=$SLOT_TX_END"
+
+"$SCRIPT_DIR"/test.sh compatible-devnet/bin/mina fork-devnet/bin/{mina,runtime_genesis_ledger} && echo "HF test completed successfully"
