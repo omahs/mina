@@ -12,6 +12,9 @@ if [[ $# -gt 0 ]]; then
   chown -R "${USER}" /workdir
   git config --global --add safe.directory /workdir
   git fetch
+  nix-env -iA unstable.jq
+  nix-env -iA unstable.curl
+  nix-env -iA unstable.gnused
 fi
 
 if [[ ! -L compatible-devnet ]]; then
