@@ -21,6 +21,13 @@ set -eo pipefail
 
 NIX_OPTS=( --accept-flake-config --experimental-features 'nix-command flakes' )
 
+if [[ "$NIX_POST_BUILD_HOOK" != "" ]]; then
+  NIX_OPTS+=( --post-build-hook "$NIX_POST_BUILD_HOOK" )
+fi
+if [[ "$NIX_SECRET_KEY" != "" ]]; then
+  NIX_OPTS+=( --secret-key-files "$NIX_SECRET_KEY" )
+fi
+
 INIT_DIR="$PWD"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
