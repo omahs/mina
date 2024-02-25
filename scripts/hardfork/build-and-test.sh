@@ -63,17 +63,15 @@ if [[ ! -L compatible-devnet ]]; then
   fi
 fi
 
-if [[ ! -L fork-devnet ]]; then
-  if [[ $# -gt 0 ]]; then
-    # Branch is specified, this is a CI run
-    git checkout $1
-    git submodule sync --recursive
-    git submodule update --init --recursive
-  fi
-  git apply "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
-  nix "${NIX_OPTS[@]}" build "$INIT_DIR?submodules=1#devnet" --out-link "$INIT_DIR/fork-devnet"
-  git apply -R "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
+if [[ $# -gt 0 ]]; then
+  # Branch is specified, this is a CI run
+  git checkout $1
+  git submodule sync --recursive
+  git submodule update --init --recursive
 fi
+git apply "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
+nix "${NIX_OPTS[@]}" build "$INIT_DIR?submodules=1#devnet" --out-link "$INIT_DIR/fork-devnet"
+git apply -R "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
 
 export SLOT_TX_END=$((RANDOM%120+30))
 
