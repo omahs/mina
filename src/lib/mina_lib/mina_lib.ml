@@ -407,16 +407,17 @@ let create_sync_status_observer ~logger ~is_seed ~demo_mode ~net
                              "Offline for too long; restarting libp2p_helper" ;
                            Mina_networking.restart_helper net ;
                            next_helper_restart := None ;
-                           match !offline_shutdown with
-                           | None ->
-                               offline_shutdown :=
-                                 Some
-                                   (Async.Clock.Event.run_after
-                                      offline_shutdown_delay
-                                      (fun () -> raise Offline_shutdown)
-                                      () )
-                           | Some _ ->
-                               () )
+                           if not is_seed then
+                             match !offline_shutdown with
+                             | None ->
+                                 offline_shutdown :=
+                                   Some
+                                     (Async.Clock.Event.run_after
+                                        offline_shutdown_delay
+                                        (fun () -> raise Offline_shutdown)
+                                        () )
+                             | Some _ ->
+                                 () )
                          () )
               | Some _ ->
                   () ) ;
@@ -922,7 +923,7 @@ let staking_ledger t =
   Consensus.Hooks.get_epoch_ledger ~constants:consensus_constants
     ~consensus_state ~local_state
 
-let next_epoch_ledger t =
+let next_epoch_ledger ?(unsafe_always_return_ledger_as_if_finalized = false) t =
   let open Option.Let_syntax in
   let%map frontier =
     Broadcast_pipe.Reader.peek t.components.transition_frontier
@@ -940,6 +941,7 @@ let next_epoch_ledger t =
   if
     Mina_numbers.Length.(
       equal root_epoch best_tip_epoch || equal best_tip_epoch zero)
+    || unsafe_always_return_ledger_as_if_finalized
   then
     (*root is in the same epoch as the best tip and so the next epoch ledger in the local state will be updated by Proof_of_stake.frontier_root_transition. Next epoch ledger in genesis epoch is the genesis ledger*)
     `Finalized
