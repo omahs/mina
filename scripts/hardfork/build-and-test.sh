@@ -74,7 +74,8 @@ git apply "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
 nix "${NIX_OPTS[@]}" build "$INIT_DIR?submodules=1#devnet" --out-link "$INIT_DIR/fork-devnet"
 git apply -R "$SCRIPT_DIR"/localnet-patches/berkeley-{1,2,3}.patch
 
-export SLOT_TX_END=$((RANDOM%120+30))
+SLOT_TX_END=${SLOT_TX_END:-$((RANDOM%120+30))}
+export SLOT_TX_END
 
 echo "Running HF test with SLOT_TX_END=$SLOT_TX_END"
 
