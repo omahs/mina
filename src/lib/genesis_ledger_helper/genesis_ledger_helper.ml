@@ -6,9 +6,6 @@ include Genesis_ledger_helper_lib
 
 type exn += Genesis_state_initialization_error
 
-let s3_bucket_prefix =
-  "https://s3-us-west-2.amazonaws.com/snark-keys.o1test.net"
-
 module Tar = struct
   let create ~root ~directory ~file () =
     match%map
@@ -153,7 +150,7 @@ module Ledger = struct
     let load_from_s3 filename =
       match config.s3_data_hash with
       | Some s3_hash -> (
-          let s3_path = s3_bucket_prefix ^/ filename in
+          let s3_path = Cache_dir.s3_keys_bucket_prefix ^/ filename in
           let local_path = Cache_dir.s3_install_path ^/ filename in
           match%bind Cache_dir.load_from_s3 s3_path local_path ~logger with
           | Ok () ->
@@ -295,7 +292,7 @@ module Ledger = struct
     Mina_ledger.Ledger.commit ledger ;
     let dirname = Option.value_exn (Mina_ledger.Ledger.get_directory ledger) in
     let root_hash =
-      State_hash.to_base58_check @@ Mina_ledger.Ledger.merkle_root ledger
+      Ledger_hash.to_base58_check @@ Mina_ledger.Ledger.merkle_root ledger
     in
     let%bind () = Unix.mkdir ~p:() genesis_dir in
     let tar_path = genesis_dir ^/ hash_filename root_hash ~ledger_name_prefix in
@@ -408,7 +405,7 @@ module Ledger = struct
             match%map
               load_from_tar ~genesis_dir ~logger ~constraint_constants
                 ~expected_merkle_root:
-                  (Option.map config.hash ~f:State_hash.of_base58_check_exn)
+                  (Option.map config.hash ~f:Ledger_hash.of_base58_check_exn)
                 ?accounts:padded_accounts_opt ~ledger_name_prefix tar_path
             with
             | Ok ledger ->
@@ -471,7 +468,7 @@ module Ledger = struct
                   { config with
                     hash =
                       Some
-                        ( State_hash.to_base58_check
+                        ( Ledger_hash.to_base58_check
                         @@ Mina_ledger.Ledger.merkle_root ledger )
                   }
                 in
@@ -514,7 +511,7 @@ module Ledger = struct
                     return (Ok (packed, config, tar_path))
                 | Error err, _ ->
                     let root_hash =
-                      State_hash.to_base58_check
+                      Ledger_hash.to_base58_check
                       @@ Mina_ledger.Ledger.merkle_root ledger
                     in
                     let tar_path =

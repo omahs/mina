@@ -160,29 +160,89 @@ module Json_layout = struct
         end
 
         type t =
-          { edit_state : Auth_required.t [@default None]
-          ; send : Auth_required.t [@default None]
-          ; receive : Auth_required.t [@default None]
-          ; access : Auth_required.t [@default None]
-          ; set_delegate : Auth_required.t [@default None]
-          ; set_permissions : Auth_required.t [@default None]
+          { edit_state : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.edit_state]
+          ; send : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.send]
+          ; receive : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.receive]
+          ; access : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.access]
+          ; set_delegate : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_delegate]
+          ; set_permissions : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_permissions]
           ; set_verification_key : Verification_key_perm.t
                 [@default
-                  { auth = None
-                  ; txn_version = Mina_numbers.Txn_version.current
+                  { auth =
+                      Auth_required.of_account_perm
+                        (fst
+                           Mina_base.Permissions.user_default
+                             .set_verification_key )
+                  ; txn_version =
+                      snd
+                        Mina_base.Permissions.user_default.set_verification_key
                   }]
-          ; set_zkapp_uri : Auth_required.t [@default None]
-          ; edit_action_state : Auth_required.t [@default None]
-          ; set_token_symbol : Auth_required.t [@default None]
-          ; increment_nonce : Auth_required.t [@default None]
-          ; set_voting_for : Auth_required.t [@default None]
-          ; set_timing : Auth_required.t [@default None]
+          ; set_zkapp_uri : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_zkapp_uri]
+          ; edit_action_state : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.edit_action_state]
+          ; set_token_symbol : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_token_symbol]
+          ; increment_nonce : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.increment_nonce]
+          ; set_voting_for : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_voting_for]
+          ; set_timing : Auth_required.t
+                [@default
+                  Auth_required.of_account_perm
+                    Mina_base.Permissions.user_default.set_timing]
           }
         [@@deriving yojson, fields, sexp, bin_io_unversioned]
 
         let fields = Fields.names |> Array.of_list
 
         let of_yojson json = of_yojson_generic ~fields of_yojson json
+
+        let to_yojson t =
+          `Assoc
+            [ ("edit_state", Auth_required.to_yojson t.edit_state)
+            ; ("send", Auth_required.to_yojson t.send)
+            ; ("receive", Auth_required.to_yojson t.receive)
+            ; ("access", Auth_required.to_yojson t.access)
+            ; ("set_delegate", Auth_required.to_yojson t.set_delegate)
+            ; ("set_permissions", Auth_required.to_yojson t.set_permissions)
+            ; ( "set_verification_key"
+              , Verification_key_perm.to_yojson t.set_verification_key )
+            ; ("set_zkapp_uri", Auth_required.to_yojson t.set_zkapp_uri)
+            ; ("edit_action_state", Auth_required.to_yojson t.edit_action_state)
+            ; ("set_token_symbol", Auth_required.to_yojson t.set_token_symbol)
+            ; ("increment_nonce", Auth_required.to_yojson t.increment_nonce)
+            ; ("set_voting_for", Auth_required.to_yojson t.set_voting_for)
+            ; ("set_timing", Auth_required.to_yojson t.set_timing)
+            ]
 
         let of_permissions (perm : Mina_base.Permissions.t) =
           { edit_state = Auth_required.of_account_perm perm.edit_action_state

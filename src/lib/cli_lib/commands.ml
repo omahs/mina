@@ -108,7 +108,7 @@ let validate_transaction =
     (* TODO upgrade to yojson 2.0.0 when possible to use seq_from_channel
      * instead of the deprecated stream interface *)
     let jsons = Yojson.Safe.stream_from_channel In_channel.stdin in
-    ( match[@alert "--deprecated"]
+    ( match[@alert "-deprecated"]
         Or_error.try_with (fun () ->
             Streams.iter
               (fun transaction_json ->
@@ -143,7 +143,7 @@ let validate_transaction =
       Format.printf "Some transactions failed to verify@." ;
       exit 1 )
     else
-      let first = Streams.peek jsons in
+      let[@alert "-deprecated"] first = Caml.Stream.peek jsons in
       match first with
       | None ->
           Format.printf "Could not parse any transactions@." ;
