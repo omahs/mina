@@ -206,6 +206,8 @@ module Make_str (_ : Wire_types.Concrete) = struct
       |> Deferred.return
   end
 
+  module type Proof_intf_deferred = Compile.Proof_intf_deferred
+
   module type Proof_intf = Compile.Proof_intf
 
   module Prover = Compile.Prover

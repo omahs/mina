@@ -15,7 +15,7 @@ val tag :
 val vk : Pickles.Side_loaded.Verification_key.t Async.Deferred.t Lazy.t
 
 module P :
-  Pickles.Proof_intf
+  Pickles.Proof_intf_deferred
     with type statement = Zkapp_statement.t
      and type t = (Nat.N2.n, Nat.N2.n) Pickles.Proof.t
 

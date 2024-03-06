@@ -83,22 +83,38 @@ let pad_messages_for_next_wrap_proof
   in
   go difference M.maxes messages_for_next_wrap_proofs
 
+module type Proof_intf_promise = sig
+  type statement
+
+  type t
+
+  val id_promise : Cache.Wrap.Key.Verification.t Promise.t Lazy.t
+
+  val verification_key_promise : Verification_key.t Promise.t Lazy.t
+
+  val verify_promise : (statement * t) list -> unit Or_error.t Promise.t
+end
+
+module type Proof_intf_deferred = sig
+  type statement
+
+  type t
+
+  val id : Cache.Wrap.Key.Verification.t Deferred.t Lazy.t
+
+  val verification_key : Verification_key.t Deferred.t Lazy.t
+
+  val verify : (statement * t) list -> unit Or_error.t Deferred.t
+end
+
 module type Proof_intf = sig
   type statement
 
   type t
 
-  val verification_key_promise : Verification_key.t Promise.t Lazy.t
+  include Proof_intf_promise with type t := t and type statement := statement
 
-  val verification_key : Verification_key.t Deferred.t Lazy.t
-
-  val id_promise : Cache.Wrap.Key.Verification.t Promise.t Lazy.t
-
-  val id : Cache.Wrap.Key.Verification.t Deferred.t Lazy.t
-
-  val verify : (statement * t) list -> unit Or_error.t Deferred.t
-
-  val verify_promise : (statement * t) list -> unit Or_error.t Promise.t
+  include Proof_intf_deferred with type t := t and type statement := statement
 end
 
 module Prover = struct
@@ -1134,11 +1150,7 @@ let compile_with_wrap_main_override_promise :
 
     let id_promise = wrap_disk_key
 
-    let id = Lazy.map ~f:Promise.to_deferred wrap_disk_key
-
     let verification_key_promise = wrap_vk
-
-    let verification_key = Lazy.map ~f:Promise.to_deferred wrap_vk
 
     let verify_promise ts =
       let%bind.Promise verification_key = Lazy.force verification_key_promise in
@@ -1148,6 +1160,10 @@ let compile_with_wrap_main_override_promise :
         end )
         (module Value)
         verification_key ts
+
+    let id = Lazy.map ~f:Promise.to_deferred wrap_disk_key
+
+    let verification_key = Lazy.map ~f:Promise.to_deferred wrap_vk
 
     let verify ts = verify_promise ts |> Promise.to_deferred
   end in

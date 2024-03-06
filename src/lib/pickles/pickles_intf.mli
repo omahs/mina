@@ -61,22 +61,30 @@ module type S = sig
       -> (t * [ `Cache_hit | `Locally_generated ]) Deferred.Or_error.t
   end
 
+  module type Proof_intf_deferred = sig
+    type statement
+
+    type t
+
+    val id : Verification_key.Id.t Deferred.t Lazy.t
+
+    val verification_key : Verification_key.t Deferred.t Lazy.t
+
+    val verify : (statement * t) list -> unit Or_error.t Deferred.t
+  end
+
   module type Proof_intf = sig
     type statement
 
     type t
 
-    val verification_key_promise : Verification_key.t Promise.t Lazy.t
-
-    val verification_key : Verification_key.t Deferred.t Lazy.t
-
     val id_promise : Verification_key.Id.t Promise.t Lazy.t
 
-    val id : Verification_key.Id.t Deferred.t Lazy.t
-
-    val verify : (statement * t) list -> unit Or_error.t Deferred.t
+    val verification_key_promise : Verification_key.t Promise.t Lazy.t
 
     val verify_promise : (statement * t) list -> unit Or_error.t Promise.t
+
+    include Proof_intf_deferred with type t := t and type statement := statement
   end
 
   module Proof : sig

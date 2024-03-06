@@ -686,24 +686,16 @@ module P = struct
   type t = (Nat.N2.n, Nat.N2.n) Pickles.Proof.t
 
   module type Proof_intf =
-    Pickles.Proof_intf with type statement = statement and type t = t
+    Pickles.Proof_intf_deferred with type statement = statement and type t = t
 
   let verification_key =
     Lazy.bind p_module ~f:(fun (module P : Proof_intf) -> P.verification_key)
 
-  let verification_key_promise = lazy (failwith "not implemented")
-
   let id = Lazy.bind p_module ~f:(fun (module P : Proof_intf) -> P.id)
-
-  let id_promise = lazy (failwith "not implemented")
 
   let verify statements =
     let module P : Proof_intf = (val Lazy.force p_module) in
     P.verify statements
-
-  let verify_promise statements =
-    let module P : Proof_intf = (val Lazy.force p_module) in
-    P.verify_promise statements
 end
 
 let initialize_prover =
